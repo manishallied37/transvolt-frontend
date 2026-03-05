@@ -54,7 +54,6 @@ class _LoginScreenState extends State<LoginScreen> {
         padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-
           children: [
             TextField(
               controller: usernameController,
@@ -74,6 +73,15 @@ class _LoginScreenState extends State<LoginScreen> {
             loading
                 ? const CircularProgressIndicator()
                 : ElevatedButton(onPressed: login, child: const Text("Login")),
+
+            const SizedBox(height: 10),
+
+            TextButton(
+              onPressed: () {
+                Navigator.pushNamed(context, "/register");
+              },
+              child: const Text("Create account"),
+            ),
           ],
         ),
       ),
