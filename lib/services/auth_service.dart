@@ -2,12 +2,13 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'token_storage.dart';
+import 'device_service.dart';
 
 class AuthService {
   static String baseUrl = dotenv.env['API_URL']!;
 
   static Future<bool> login(
-    String username,
+    String login,
     String password,
     String deviceId,
   ) async {
@@ -16,7 +17,7 @@ class AuthService {
         Uri.parse("$baseUrl/auth/login"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
-          "username": username,
+          "login": login,
           "password": password,
           "deviceId": deviceId,
         }),
@@ -79,6 +80,7 @@ class AuthService {
 
   static Future<bool> register(
     String username,
+    String email,
     String password,
     String role,
     String region,
@@ -91,6 +93,7 @@ class AuthService {
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "username": username,
+          "email": email,
           "password": password,
           "role": role,
           "region": region,
@@ -105,6 +108,7 @@ class AuthService {
 
         await TokenStorage.saveAccessToken(data["accessToken"]);
         await TokenStorage.saveRefreshToken(data["refreshToken"]);
+        await DeviceService.registerDevice();
 
         return true;
       }

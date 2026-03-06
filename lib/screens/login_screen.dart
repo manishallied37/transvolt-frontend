@@ -11,9 +11,10 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController usernameController = TextEditingController();
+  final TextEditingController loginController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
+  bool hidePassword = true;
   bool loading = false;
 
   Future<void> login() async {
@@ -24,7 +25,7 @@ class _LoginScreenState extends State<LoginScreen> {
     String deviceId = await DeviceService.getDeviceId();
 
     bool success = await AuthService.login(
-      usernameController.text,
+      loginController.text,
       passwordController.text,
       deviceId,
     );
@@ -56,16 +57,35 @@ class _LoginScreenState extends State<LoginScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             TextField(
-              controller: usernameController,
-              decoration: const InputDecoration(labelText: "Username"),
+              controller: loginController,
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.next,
+              decoration: const InputDecoration(
+                labelText: "Username or Email",
+                hintText: "Enter username or email",
+              ),
             ),
 
             const SizedBox(height: 20),
 
             TextField(
               controller: passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: "Password"),
+              obscureText: hidePassword,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => login(),
+              decoration: InputDecoration(
+                labelText: "Password",
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    hidePassword ? Icons.visibility_off : Icons.visibility,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      hidePassword = !hidePassword;
+                    });
+                  },
+                ),
+              ),
             ),
 
             const SizedBox(height: 30),
@@ -77,10 +97,28 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 10),
 
             TextButton(
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: const Size(0, 0),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              onPressed: () {
+                Navigator.pushNamed(context, "/forgot-password");
+              },
+              child: const Text(
+                "Forgot Password?",
+                style: TextStyle(
+                  color: Colors.blue,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+
+            ElevatedButton(
               onPressed: () {
                 Navigator.pushNamed(context, "/register");
               },
-              child: const Text("Create account"),
+              child: const Text("Create Account"),
             ),
           ],
         ),

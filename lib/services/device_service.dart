@@ -1,7 +1,11 @@
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DeviceService {
+  static const String deviceRegisteredKey = "device_registered";
+  static const String deviceIdKey = "device_id";
+
   static Future<String> getDeviceId() async {
     final deviceInfo = DeviceInfoPlugin();
 
@@ -21,5 +25,34 @@ class DeviceService {
     }
 
     return "unknown-device";
+  }
+
+  // Check if device is already registered
+  static Future<bool> isDeviceRegistered() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(deviceRegisteredKey) ?? false;
+  }
+
+  // Save device registration
+  static Future<void> registerDevice() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    String deviceId = await getDeviceId();
+
+    await prefs.setBool(deviceRegisteredKey, true);
+    await prefs.setString(deviceIdKey, deviceId);
+  }
+
+  // Get stored device id
+  static Future<String?> getStoredDeviceId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(deviceIdKey);
+  }
+
+  // Clear device (logout / reinstall scenario)
+  static Future<void> clearDevice() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(deviceRegisteredKey);
+    await prefs.remove(deviceIdKey);
   }
 }
