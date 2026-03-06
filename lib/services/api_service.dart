@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-
 import 'token_storage.dart';
 import 'auth_service.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ApiService {
-  static const baseUrl = "http://192.168.0.66:5000";
+  static String baseUrl = dotenv.env['API_URL']!;
 
   static Future getDashboard() async {
     String? token = await TokenStorage.getAccessToken();

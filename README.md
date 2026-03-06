@@ -21,4 +21,4 @@ flutter run -d <device_name> -- to run on wirelessly connected mobile device OR
 Device name can be get by `flutter devices` command  
 flutter run -- to run on Web browser  
 
-Open `api_service.dart` and `auth_service.dart` and in the baseURL put your `PC IP` by using `ipconfig` in CMD or PowerShell if you are using wireless debugging on mobile, if testing on Web Browser, then it will be `localhost`
+In .env set the BACKEND URL
