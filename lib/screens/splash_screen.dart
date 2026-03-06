@@ -43,7 +43,7 @@ class _SplashScreenState extends State<SplashScreen> {
             const SizedBox(height: 20),
  
             const Text(
-              "Transvolt Fleet",
+              "NetraDyne FMS",
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
  
