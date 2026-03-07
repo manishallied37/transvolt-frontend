@@ -30,7 +30,7 @@ class _SplashScreenState extends State<SplashScreen> {
     }
   }
 
-@override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
@@ -39,16 +39,16 @@ class _SplashScreenState extends State<SplashScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             SvgPicture.asset("images/transvolt_logo.svg", height: 100),
- 
+
             const SizedBox(height: 20),
- 
+
             const Text(
               "NetraDyne FMS",
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
- 
+
             const SizedBox(height: 40),
- 
+
             const CircularProgressIndicator(),
           ],
         ),

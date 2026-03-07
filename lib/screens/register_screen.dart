@@ -49,12 +49,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     String deviceId = await DeviceService.getDeviceId();
 
     bool success = await AuthService.register(
-      usernameController.text,
-      emailController.text,
-      passwordController.text,
-      roleController.text,
-      regionController.text,
-      depotController.text,
+      usernameController.text.trim(),
+      emailController.text.trim(),
+      passwordController.text.trim(),
+      roleController.text.trim(),
+      regionController.text.trim(),
+      depotController.text.trim(),
       deviceId,
     );
 

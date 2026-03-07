@@ -25,8 +25,8 @@ class _LoginScreenState extends State<LoginScreen> {
     String deviceId = await DeviceService.getDeviceId();
 
     bool success = await AuthService.login(
-      loginController.text,
-      passwordController.text,
+      loginController.text.trim(),
+      passwordController.text.trim(),
       deviceId,
     );
 

@@ -27,13 +27,11 @@ class DeviceService {
     return "unknown-device";
   }
 
-  // Check if device is already registered
   static Future<bool> isDeviceRegistered() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(deviceRegisteredKey) ?? false;
   }
 
-  // Save device registration
   static Future<void> registerDevice() async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -43,13 +41,11 @@ class DeviceService {
     await prefs.setString(deviceIdKey, deviceId);
   }
 
-  // Get stored device id
   static Future<String?> getStoredDeviceId() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(deviceIdKey);
   }
 
-  // Clear device (logout / reinstall scenario)
   static Future<void> clearDevice() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(deviceRegisteredKey);
