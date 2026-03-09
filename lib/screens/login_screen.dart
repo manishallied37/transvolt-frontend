@@ -34,6 +34,8 @@ class _LoginScreenState extends State<LoginScreen> {
       loading = false;
     });
 
+    if (!mounted) return;
+
     if (success) {
       Navigator.pushReplacement(
         context,

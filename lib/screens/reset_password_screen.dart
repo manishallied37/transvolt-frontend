@@ -17,6 +17,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
   bool loading = false;
+  bool obscurePassword = true;
+  bool obscureConfirm = true;
 
   Future<void> resetPassword() async {
     if (!formKey.currentState!.validate()) return;
@@ -82,10 +84,20 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             children: [
               TextFormField(
                 controller: passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(
+                obscureText: obscurePassword,
+                decoration: InputDecoration(
                   labelText: "New Password",
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      obscurePassword ? Icons.visibility_off : Icons.visibility,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        obscurePassword = !obscurePassword;
+                      });
+                    },
+                  ),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -104,11 +116,24 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
               TextFormField(
                 controller: confirmController,
-                obscureText: true,
-                decoration: const InputDecoration(
+                obscureText: obscureConfirm,
+                decoration: InputDecoration(
                   labelText: "Confirm Password",
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      obscureConfirm ? Icons.visibility_off : Icons.visibility,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        obscureConfirm = !obscureConfirm;
+                      });
+                    },
+                  ),
                 ),
+                onChanged: (_) {
+                  formKey.currentState?.validate();
+                },
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return "Confirm your password";

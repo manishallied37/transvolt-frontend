@@ -62,6 +62,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       loading = false;
     });
 
+    if (!mounted) return;
+
     if (success) {
       Navigator.pushReplacementNamed(context, "/dashboard");
     } else {
@@ -76,102 +78,106 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text("Register")),
 
-      body: Padding(
-        padding: const EdgeInsets.all(20),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              TextField(
+                controller: usernameController,
+                decoration: const InputDecoration(labelText: "Username"),
+              ),
 
-        child: Column(
-          children: [
-            TextField(
-              controller: usernameController,
-              decoration: const InputDecoration(labelText: "Username"),
-            ),
+              TextField(
+                controller: emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(labelText: "Email"),
+              ),
 
-            TextField(
-              controller: emailController,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(labelText: "Email"),
-            ),
-
-            TextField(
-              controller: passwordController,
-              obscureText: hidePassword,
-              decoration: InputDecoration(
-                labelText: "Password",
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    hidePassword ? Icons.visibility_off : Icons.visibility,
+              TextField(
+                controller: passwordController,
+                obscureText: hidePassword,
+                decoration: InputDecoration(
+                  labelText: "Password",
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      hidePassword ? Icons.visibility_off : Icons.visibility,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        hidePassword = !hidePassword;
+                      });
+                    },
                   ),
-                  onPressed: () {
-                    setState(() {
-                      hidePassword = !hidePassword;
-                    });
-                  },
                 ),
               ),
-            ),
 
-            TextField(
-              controller: confirmPasswordController,
-              obscureText: hideConfirmPassword,
-              decoration: InputDecoration(
-                labelText: "Confirm Password",
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    hideConfirmPassword
-                        ? Icons.visibility_off
-                        : Icons.visibility,
+              TextField(
+                controller: confirmPasswordController,
+                obscureText: hideConfirmPassword,
+                decoration: InputDecoration(
+                  labelText: "Confirm Password",
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      hideConfirmPassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        hideConfirmPassword = !hideConfirmPassword;
+                      });
+                    },
                   ),
-                  onPressed: () {
-                    setState(() {
-                      hideConfirmPassword = !hideConfirmPassword;
-                    });
-                  },
                 ),
               ),
-            ),
 
-            DropdownButtonFormField<String>(
-              initialValue: roleController.text.isEmpty
-                  ? null
-                  : roleController.text,
-              decoration: const InputDecoration(labelText: "Role"),
-              items: const [
-                DropdownMenuItem(value: "Authority", child: Text("Authority")),
-                DropdownMenuItem(
-                  value: "Command Center",
-                  child: Text("Command Center"),
-                ),
-                DropdownMenuItem(
-                  value: "Organization",
-                  child: Text("Organization"),
-                ),
-              ],
-              onChanged: (value) {
-                setState(() {
-                  roleController.text = value!;
-                });
-              },
-            ),
+              DropdownButtonFormField<String>(
+                initialValue: roleController.text.isEmpty
+                    ? null
+                    : roleController.text,
+                decoration: const InputDecoration(labelText: "Role"),
+                items: const [
+                  DropdownMenuItem(
+                    value: "Authority",
+                    child: Text("Authority"),
+                  ),
+                  DropdownMenuItem(
+                    value: "Command Center",
+                    child: Text("Command Center"),
+                  ),
+                  DropdownMenuItem(
+                    value: "Organization",
+                    child: Text("Organization"),
+                  ),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    roleController.text = value!;
+                  });
+                },
+              ),
 
-            TextField(
-              controller: regionController,
-              decoration: const InputDecoration(labelText: "Region"),
-            ),
+              TextField(
+                controller: regionController,
+                decoration: const InputDecoration(labelText: "Region"),
+              ),
 
-            TextField(
-              controller: depotController,
-              decoration: const InputDecoration(labelText: "Depot"),
-            ),
+              TextField(
+                controller: depotController,
+                decoration: const InputDecoration(labelText: "Depot"),
+              ),
 
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-            ElevatedButton(
-              onPressed: loading ? null : register,
-              child: loading
-                  ? const CircularProgressIndicator()
-                  : const Text("Register"),
-            ),
-          ],
+              ElevatedButton(
+                onPressed: loading ? null : register,
+                child: loading
+                    ? const CircularProgressIndicator()
+                    : const Text("Register"),
+              ),
+            ],
+          ),
         ),
       ),
     );
