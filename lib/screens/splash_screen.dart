@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/token_storage.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../services/token_storage.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -13,11 +13,12 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _initApp();
+    initApp();
   }
 
-  Future<void> _initApp() async {
-    await Future.delayed(const Duration(seconds: 3));
+  Future<void> initApp() async {
+    /// simulate loading / API checks
+    await Future.delayed(const Duration(seconds: 2));
 
     final token = await TokenStorage.getAccessToken();
 
@@ -33,24 +34,52 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SvgPicture.asset("images/transvolt_logo.svg", height: 100),
+      body: Container(
+        /// optional gradient background
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color.fromARGB(255, 232, 234, 236),
+              Color.fromARGB(255, 232, 234, 236),
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
 
-            const SizedBox(height: 20),
+        child: SafeArea(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                /// LOGO
+                SvgPicture.asset("images/transvolt_logo.svg", height: 120),
 
-            const Text(
-              "NetraDyne FMS",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                const SizedBox(height: 20),
+
+                /// APP NAME
+                const Text(
+                  "NetraDyne FMS",
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                const Text(
+                  "Fleet Management System",
+                  style: TextStyle(color: Colors.black, fontSize: 14),
+                ),
+
+                const SizedBox(height: 40),
+
+                const CircularProgressIndicator(color: Colors.white),
+              ],
             ),
-
-            const SizedBox(height: 40),
-
-            const CircularProgressIndicator(),
-          ],
+          ),
         ),
       ),
     );

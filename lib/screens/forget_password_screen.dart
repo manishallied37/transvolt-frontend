@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'otp_verify_screen.dart';
 import '../services/auth_service.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -10,34 +11,42 @@ class ForgotPasswordScreen extends StatefulWidget {
 }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
-  final TextEditingController emailController = TextEditingController();
   final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController phoneController = TextEditingController();
+
   bool loading = false;
+  String fullPhoneNumber = "";
+  String method = "email";
 
   Future<void> sendOtp() async {
     if (!formKey.currentState!.validate()) return;
-
-    final email = emailController.text.trim();
 
     setState(() {
       loading = true;
     });
 
     try {
-      bool success = await AuthService.sendOtp(email);
+      String identifier = method == "email"
+          ? emailController.text.trim()
+          : fullPhoneNumber.isNotEmpty
+          ? fullPhoneNumber
+          : phoneController.text.trim();
+
+      bool success = await AuthService.sendOtp(identifier, method);
 
       if (!mounted) return;
-
-      setState(() {
-        loading = false;
-      });
 
       if (success) {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => OtpVerificationScreen(email: email),
+            builder: (_) => OtpVerificationScreen(
+              identifier: identifier,
+              method: method,
+              flow: "reset",
+            ),
           ),
         );
       } else {
@@ -46,83 +55,190 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ).showSnackBar(const SnackBar(content: Text("Failed to send OTP")));
       }
     } catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        loading = false;
-      });
-
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text("Something went wrong")));
     }
+
+    setState(() {
+      loading = false;
+    });
   }
 
   @override
   void dispose() {
     emailController.dispose();
+    phoneController.dispose();
     super.dispose();
+  }
+
+  Widget buildMethodSelector() {
+    return Row(
+      children: [
+        Expanded(
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                method = "email";
+              });
+            },
+            child: Container(
+              height: 50,
+              decoration: BoxDecoration(
+                color: method == "email" ? Colors.blue : Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Center(
+                child: Text(
+                  "Email",
+                  style: TextStyle(
+                    color: method == "email" ? Colors.white : Colors.black,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                method = "phone";
+              });
+            },
+            child: Container(
+              height: 50,
+              decoration: BoxDecoration(
+                color: method == "phone" ? Colors.blue : Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Center(
+                child: Text(
+                  "Phone",
+                  style: TextStyle(
+                    color: method == "phone" ? Colors.white : Colors.black,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget buildInputField() {
+    if (method == "email") {
+      return TextFormField(
+        controller: emailController,
+        keyboardType: TextInputType.emailAddress,
+        decoration: const InputDecoration(
+          labelText: "Email Address",
+          border: OutlineInputBorder(),
+        ),
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return "Enter email";
+          }
+          if (!value.contains("@")) {
+            return "Enter valid email";
+          }
+          return null;
+        },
+      );
+    }
+
+    return IntlPhoneField(
+      controller: phoneController,
+      initialCountryCode: 'IN',
+      keyboardType: TextInputType.phone,
+      decoration: const InputDecoration(
+        labelText: "Phone Number",
+        border: OutlineInputBorder(),
+      ),
+      onChanged: (phone) {
+        fullPhoneNumber = phone.completeNumber;
+      },
+      validator: (phone) {
+        if (phone == null || phone.number.isEmpty) {
+          return "Enter phone number";
+        }
+        if (phone.number.length < 10) {
+          return "Enter valid phone number";
+        }
+        return null;
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Forgot Password")),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "Enter your registered email to receive OTP",
-                style: TextStyle(fontSize: 16),
-              ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Form(
+            key: formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 40),
 
-              const SizedBox(height: 20),
-
-              TextFormField(
-                controller: emailController,
-                keyboardType: TextInputType.emailAddress,
-                autofillHints: const [AutofillHints.email],
-                decoration: const InputDecoration(
-                  labelText: "Email",
-                  border: OutlineInputBorder(),
+                Center(
+                  child: Image.asset(
+                    "images/transvolt_logo.png",
+                    height: 120,
+                    fit: BoxFit.contain,
+                  ),
                 ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return "Email required";
-                  }
 
-                  final emailRegex = RegExp(
-                    r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]+$',
-                  );
+                const SizedBox(height: 20),
 
-                  if (!emailRegex.hasMatch(value.trim())) {
-                    return "Invalid email";
-                  }
+                const Text(
+                  "Forgot Password",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+                ),
 
-                  return null;
-                },
-              ),
+                const SizedBox(height: 10),
 
-              const SizedBox(height: 25),
+                const Text(
+                  "Choose a method to receive OTP",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey),
+                ),
 
-              loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: sendOtp,
-                        child: const Text(
-                          "Send OTP",
-                          style: TextStyle(fontSize: 16),
-                        ),
-                      ),
-                    ),
-            ],
+                const SizedBox(height: 30),
+
+                buildMethodSelector(),
+
+                const SizedBox(height: 25),
+
+                buildInputField(),
+
+                const SizedBox(height: 30),
+
+                SizedBox(
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: loading ? null : sendOtp,
+                    child: loading
+                        ? const SizedBox(
+                            height: 22,
+                            width: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text("Send OTP"),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

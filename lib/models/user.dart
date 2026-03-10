@@ -9,6 +9,7 @@ class User {
   final bool mfaEnabled;
   final bool isActive;
   final String? email;
+  final String? mobile_number;
 
   User({
     required this.id,
@@ -21,6 +22,7 @@ class User {
     required this.mfaEnabled,
     required this.isActive,
     required this.email,
+    required this.mobile_number,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -35,6 +37,7 @@ class User {
       mfaEnabled: json['mfa_enabled'] ?? true,
       isActive: json['is_active'] ?? true,
       email: json['email'],
+      mobile_number: json['mobile_number'],
     );
   }
 }
