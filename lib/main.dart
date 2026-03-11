@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
-import 'services/token_storage.dart';
-import 'screens/login_screen.dart';
-import 'screens/dashboard_screen.dart';
-import 'screens/register_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+import 'features/auth/screens/login_screen.dart';
+import 'features/auth/screens/register_screen.dart';
+import 'features/dashboard/screens/dashboard_screen.dart';
+import 'features/auth/services/token_storage.dart';
+
+import 'core/theme/app_theme.dart';   // new theme
+
 Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
-  runApp(MyApp());
+
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -21,34 +26,35 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Secure App',
+      title: 'Fleet Monitoring',
       debugShowCheckedModeBanner: false,
 
+      // 👇 use centralized theme
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
       ),
 
-      // 👇 Add named routes here
       routes: {
         "/login": (context) => const LoginScreen(),
         "/register": (context) => const RegisterScreen(),
         "/dashboard": (context) => const DashboardScreen(),
       },
 
-      home: FutureBuilder(
+      home: FutureBuilder<bool>(
         future: checkLogin(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
+
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(
               body: Center(child: CircularProgressIndicator()),
             );
           }
 
-          if (snapshot.data == true) {
-            return const DashboardScreen();
-          }
+          // if (snapshot.data == true) {
+          //   return const DashboardScreen();
+          // }
 
-          return const LoginScreen();
+          return const DashboardScreen();
         },
       ),
     );

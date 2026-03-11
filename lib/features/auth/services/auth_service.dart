@@ -1,3 +1,4 @@
+// TODO Implement this library.
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -7,10 +8,10 @@ class AuthService {
   static String baseUrl = dotenv.env['API_URL']!;
 
   static Future<bool> login(
-    String username,
-    String password,
-    String deviceId,
-  ) async {
+      String username,
+      String password,
+      String deviceId,
+      ) async {
     try {
       final response = await http.post(
         Uri.parse("$baseUrl/auth/login"),
@@ -78,13 +79,13 @@ class AuthService {
   }
 
   static Future<bool> register(
-    String username,
-    String password,
-    String role,
-    String region,
-    String depot,
-    String deviceId,
-  ) async {
+      String username,
+      String password,
+      String role,
+      String region,
+      String depot,
+      String deviceId,
+      ) async {
     try {
       final response = await http.post(
         Uri.parse("$baseUrl/auth/register"),
