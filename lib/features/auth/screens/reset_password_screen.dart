@@ -16,30 +16,24 @@ class ResetPasswordScreen extends StatefulWidget {
 }
 
 class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
-  final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+  final _formKey = GlobalKey<FormState>();
 
-  final TextEditingController passwordController = TextEditingController();
-  final TextEditingController confirmController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmController = TextEditingController();
 
-  final passwordRegex = RegExp(
-    r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$',
-  );
+  bool _loading = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirm = true;
 
-  bool loading = false;
-  bool obscurePassword = true;
-  bool obscureConfirm = true;
+  Future<void> _resetPassword() async {
+    if (!_formKey.currentState!.validate()) return;
 
-  Future<void> resetPassword() async {
-    if (!formKey.currentState!.validate()) return;
-
-    setState(() {
-      loading = true;
-    });
+    setState(() => _loading = true);
 
     try {
-      bool success = await AuthService.resetPassword(
+      final success = await AuthService.resetPassword(
         widget.identifier.trim(),
-        passwordController.text.trim(),
+        _passwordController.text.trim(),
         widget.method,
       );
 
@@ -50,28 +44,49 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           const SnackBar(content: Text("Password reset successfully")),
         );
 
+        _passwordController.clear();
+        _confirmController.clear();
+
         Navigator.popUntil(context, (route) => route.isFirst);
       } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Password reset failed")));
+        _showError("Password reset failed");
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Something went wrong")));
+      _showError(e.toString().replaceAll("Exception:", "").trim());
     }
 
-    setState(() {
-      loading = false;
-    });
+    if (mounted) {
+      setState(() => _loading = false);
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
   void dispose() {
-    passwordController.dispose();
-    confirmController.dispose();
+    _passwordController.dispose();
+    _confirmController.dispose();
     super.dispose();
+  }
+
+  InputDecoration _inputDecoration({
+    required String label,
+    required bool obscure,
+    required VoidCallback toggle,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      border: const OutlineInputBorder(),
+      errorMaxLines: 6,
+      suffixIcon: IconButton(
+        icon: Icon(obscure ? Icons.visibility_off : Icons.visibility),
+        onPressed: toggle,
+      ),
+    );
   }
 
   @override
@@ -81,18 +96,15 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Form(
-            key: formKey,
+            key: _formKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 40),
 
                 Center(
-                  child: Image.asset(
-                    "images/transvolt_logo.png",
-                    height: 120,
-                    fit: BoxFit.contain,
-                  ),
+                  child: Image.asset("images/transvolt_logo.png", height: 120),
                 ),
 
                 const SizedBox(height: 20),
@@ -114,65 +126,68 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 const SizedBox(height: 40),
 
                 TextFormField(
-                  controller: passwordController,
-                  obscureText: obscurePassword,
-                  decoration: InputDecoration(
-                    labelText: "New Password",
-                    border: const OutlineInputBorder(),
-                    errorMaxLines: 2,
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        obscurePassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          obscurePassword = !obscurePassword;
-                        });
-                      },
-                    ),
+                  controller: _passwordController,
+                  obscureText: _obscurePassword,
+                  decoration: _inputDecoration(
+                    label: "New Password",
+                    obscure: _obscurePassword,
+                    toggle: () {
+                      setState(() => _obscurePassword = !_obscurePassword);
+                    },
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return "Enter password";
                     }
 
-                    if (!passwordRegex.hasMatch(value)) {
-                      return "Password must contain upper, lower, number & special characters";
+                    final pwd = value.trim();
+
+                    List<String> errors = [];
+
+                    if (!RegExp(r'[A-Z]').hasMatch(pwd)) {
+                      errors.add("• Uppercase letter");
                     }
 
-                    return null;
+                    if (!RegExp(r'[a-z]').hasMatch(pwd)) {
+                      errors.add("• Lowercase letter");
+                    }
+
+                    if (!RegExp(r'\d').hasMatch(pwd)) {
+                      errors.add("• Number");
+                    }
+
+                    if (!RegExp(r'[@$!%*?&]').hasMatch(pwd)) {
+                      errors.add("• Special character");
+                    }
+
+                    if (pwd.length < 8) {
+                      errors.add("• Minimum 8 characters");
+                    }
+
+                    if (errors.isEmpty) return null;
+
+                    return "Password must contain:\n${errors.join("\n")}";
                   },
                 ),
 
                 const SizedBox(height: 20),
 
                 TextFormField(
-                  controller: confirmController,
-                  obscureText: obscureConfirm,
-                  decoration: InputDecoration(
-                    labelText: "Confirm Password",
-                    border: const OutlineInputBorder(),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        obscureConfirm
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          obscureConfirm = !obscureConfirm;
-                        });
-                      },
-                    ),
+                  controller: _confirmController,
+                  obscureText: _obscureConfirm,
+                  decoration: _inputDecoration(
+                    label: "Confirm Password",
+                    obscure: _obscureConfirm,
+                    toggle: () {
+                      setState(() => _obscureConfirm = !_obscureConfirm);
+                    },
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return "Confirm password";
                     }
 
-                    if (value != passwordController.text) {
+                    if (value.trim() != _passwordController.text.trim()) {
                       return "Passwords do not match";
                     }
 
@@ -185,8 +200,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 SizedBox(
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: loading ? null : resetPassword,
-                    child: loading
+                    onPressed: _loading ? null : _resetPassword,
+                    child: _loading
                         ? const SizedBox(
                             height: 22,
                             width: 22,

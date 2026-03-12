@@ -2,18 +2,44 @@ import 'package:flutter/material.dart';
 import '../services/token_storage.dart';
 import 'login_screen.dart';
 import '../../events/screens/events_screen.dart';
+import '../services/auth_service.dart';
+import '../services/auth_state.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
   Future<void> _logout(BuildContext context) async {
-    await TokenStorage.clearTokens();
+    bool? confirm = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Logout"),
+        content: const Text("Are you sure you want to logout?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Logout"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await AuthService.logout();
+    } catch (e) {
+      await TokenStorage.clearTokens();
+    }
 
     if (!context.mounted) return;
 
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (context) => const LoginScreen()),
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
       (route) => false,
     );
   }
@@ -31,23 +57,46 @@ class DashboardScreen extends StatelessWidget {
         ],
       ),
 
-      // ---------- Drawer (Side Bar) ----------
       drawer: Drawer(
         child: SafeArea(
           child: ListView(
             padding: EdgeInsets.zero,
             children: [
-              const UserAccountsDrawerHeader(
-                accountName: Text("Welcome"),
-                accountEmail: Text("user@example.com"),
-                currentAccountPicture: CircleAvatar(child: Icon(Icons.person)),
+              /// Dynamic User Header
+              FutureBuilder(
+                future: Future.wait([
+                  AuthState.getUserRole(),
+                  AuthState.getUserEmail(),
+                ]),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const UserAccountsDrawerHeader(
+                      accountName: Text("Loading..."),
+                      accountEmail: Text(""),
+                      currentAccountPicture: CircleAvatar(
+                        child: Icon(Icons.person),
+                      ),
+                    );
+                  }
+
+                  final role = snapshot.data![0] ?? "User";
+                  final email = snapshot.data![1] ?? "";
+
+                  return UserAccountsDrawerHeader(
+                    accountName: Text(role),
+                    accountEmail: Text(email),
+                    currentAccountPicture: const CircleAvatar(
+                      child: Icon(Icons.person),
+                    ),
+                  );
+                },
               ),
 
               ListTile(
                 leading: const Icon(Icons.dashboard),
                 title: const Text('Dashboard'),
                 onTap: () {
-                  Navigator.pop(context); // just close the drawer
+                  Navigator.pop(context);
                 },
               ),
 
@@ -55,12 +104,10 @@ class DashboardScreen extends StatelessWidget {
                 leading: const Icon(Icons.event),
                 title: const Text('Events'),
                 onTap: () {
-                  Navigator.pop(context); // close the drawer first
+                  Navigator.pop(context);
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const EventsScreen()),
-                    // If your EventsScreen constructor isn't const, use:
-                    // MaterialPageRoute(builder: (_) => EventsScreen()),
                   );
                 },
               ),
@@ -77,9 +124,22 @@ class DashboardScreen extends StatelessWidget {
         ),
       ),
 
-      // ---------------------------------------
-      body: const Center(
-        child: Text("Login Successful", style: TextStyle(fontSize: 22)),
+      body: FutureBuilder(
+        future: AuthState.getUsername(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final username = snapshot.data ?? "User";
+
+          return Center(
+            child: Text(
+              "Welcome, $username",
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+          );
+        },
       ),
     );
   }

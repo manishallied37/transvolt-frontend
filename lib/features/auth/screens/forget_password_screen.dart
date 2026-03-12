@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'otp_verify_screen.dart';
-import '../services/auth_service.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
+import '../services/auth_service.dart';
+import 'otp_verify_screen.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -11,30 +11,43 @@ class ForgotPasswordScreen extends StatefulWidget {
 }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
-  final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+  final _formKey = GlobalKey<FormState>();
 
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController phoneController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
 
-  bool loading = false;
-  String fullPhoneNumber = "";
-  String method = "email";
+  bool _loading = false;
+  String _method = "email";
+  String _fullPhoneNumber = "";
 
-  Future<void> sendOtp() async {
-    if (!formKey.currentState!.validate()) return;
+  final RegExp _emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
 
-    setState(() {
-      loading = true;
-    });
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _sendOtp() async {
+    if (_loading) return;
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _loading = true);
 
     try {
-      String identifier = method == "email"
-          ? emailController.text.trim()
-          : fullPhoneNumber.isNotEmpty
-          ? fullPhoneNumber
-          : phoneController.text.trim();
+      final identifier = _method == "email"
+          ? _emailController.text.trim()
+          : (_fullPhoneNumber.isNotEmpty
+                ? _fullPhoneNumber
+                : _phoneController.text.trim());
 
-      bool success = await AuthService.sendOtp(identifier, method);
+      if (_method == "phone" && identifier.isEmpty) {
+        _showMessage("Enter valid phone number");
+        setState(() => _loading = false);
+        return;
+      }
+
+      final success = await AuthService.sendOtp(identifier, _method);
 
       if (!mounted) return;
 
@@ -44,106 +57,81 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           MaterialPageRoute(
             builder: (_) => OtpVerificationScreen(
               identifier: identifier,
-              method: method,
+              method: _method,
               flow: "reset",
             ),
           ),
         );
       } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Failed to send OTP")));
+        _showMessage("Failed to send OTP");
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Something went wrong")));
+      _showMessage(e.toString().replaceAll("Exception:", "").trim());
     }
 
-    setState(() {
-      loading = false;
-    });
+    if (mounted) {
+      setState(() => _loading = false);
+    }
   }
 
-  @override
-  void dispose() {
-    emailController.dispose();
-    phoneController.dispose();
-    super.dispose();
+  InputDecoration _inputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      border: const OutlineInputBorder(),
+    );
   }
 
-  Widget buildMethodSelector() {
+  Widget _methodButton(String value, String label) {
+    final isSelected = _method == value;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _method = value;
+          });
+        },
+        child: Container(
+          height: 50,
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.blue : Colors.grey.shade300,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.black,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMethodSelector() {
     return Row(
       children: [
-        Expanded(
-          child: GestureDetector(
-            onTap: () {
-              setState(() {
-                method = "email";
-              });
-            },
-            child: Container(
-              height: 50,
-              decoration: BoxDecoration(
-                color: method == "email" ? Colors.blue : Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Center(
-                child: Text(
-                  "Email",
-                  style: TextStyle(
-                    color: method == "email" ? Colors.white : Colors.black,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
+        _methodButton("email", "Email"),
         const SizedBox(width: 10),
-        Expanded(
-          child: GestureDetector(
-            onTap: () {
-              setState(() {
-                method = "phone";
-              });
-            },
-            child: Container(
-              height: 50,
-              decoration: BoxDecoration(
-                color: method == "phone" ? Colors.blue : Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Center(
-                child: Text(
-                  "Phone",
-                  style: TextStyle(
-                    color: method == "phone" ? Colors.white : Colors.black,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
+        _methodButton("phone", "Phone"),
       ],
     );
   }
 
-  Widget buildInputField() {
-    if (method == "email") {
+  Widget _buildInputField() {
+    if (_method == "email") {
       return TextFormField(
-        controller: emailController,
+        controller: _emailController,
         keyboardType: TextInputType.emailAddress,
-        decoration: const InputDecoration(
-          labelText: "Email Address",
-          border: OutlineInputBorder(),
-        ),
+        decoration: _inputDecoration("Email Address"),
         validator: (value) {
-          if (value == null || value.isEmpty) {
+          if (value == null || value.trim().isEmpty) {
             return "Enter email";
           }
-          if (!value.contains("@")) {
+          if (!_emailRegex.hasMatch(value.trim())) {
             return "Enter valid email";
           }
           return null;
@@ -152,15 +140,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
 
     return IntlPhoneField(
-      controller: phoneController,
+      controller: _phoneController,
       initialCountryCode: 'IN',
       keyboardType: TextInputType.phone,
-      decoration: const InputDecoration(
-        labelText: "Phone Number",
-        border: OutlineInputBorder(),
-      ),
+      decoration: _inputDecoration("Phone Number"),
       onChanged: (phone) {
-        fullPhoneNumber = phone.completeNumber;
+        _fullPhoneNumber = phone.completeNumber;
       },
       validator: (phone) {
         if (phone == null || phone.number.isEmpty) {
@@ -175,24 +160,28 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   @override
+  void dispose() {
+    _emailController.dispose();
+    _phoneController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Form(
-            key: formKey,
+            key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 40),
 
+                /// LOGO
                 Center(
-                  child: Image.asset(
-                    "images/transvolt_logo.png",
-                    height: 120,
-                    fit: BoxFit.contain,
-                  ),
+                  child: Image.asset("images/transvolt_logo.png", height: 120),
                 ),
 
                 const SizedBox(height: 20),
@@ -213,19 +202,19 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
                 const SizedBox(height: 30),
 
-                buildMethodSelector(),
+                _buildMethodSelector(),
 
                 const SizedBox(height: 25),
 
-                buildInputField(),
+                _buildInputField(),
 
                 const SizedBox(height: 30),
 
                 SizedBox(
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: loading ? null : sendOtp,
-                    child: loading
+                    onPressed: _loading ? null : _sendOtp,
+                    child: _loading
                         ? const SizedBox(
                             height: 22,
                             width: 22,

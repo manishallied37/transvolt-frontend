@@ -5,11 +5,12 @@ import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/dashboard_screen.dart';
 import 'features/auth/screens/register_screen.dart';
 import 'features/auth/screens/forget_password_screen.dart';
+import 'features/auth/services/auth_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
-
+  AuthService.setupInterceptors();
   runApp(const MyApp());
 }
 

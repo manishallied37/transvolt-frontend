@@ -7,24 +7,32 @@ class DeviceService {
   static const String deviceIdKey = "device_id";
 
   static Future<String> getDeviceId() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    String? storedId = prefs.getString(deviceIdKey);
+
+    if (storedId != null) {
+      return storedId;
+    }
+
     final deviceInfo = DeviceInfoPlugin();
+
+    String deviceId = "unknown-device";
 
     if (kIsWeb) {
       WebBrowserInfo webInfo = await deviceInfo.webBrowserInfo;
-      return webInfo.userAgent ?? "web-device";
-    }
-
-    if (defaultTargetPlatform == TargetPlatform.android) {
+      deviceId = webInfo.userAgent ?? "web-device";
+    } else if (defaultTargetPlatform == TargetPlatform.android) {
       AndroidDeviceInfo android = await deviceInfo.androidInfo;
-      return android.id;
-    }
-
-    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      deviceId = android.id;
+    } else if (defaultTargetPlatform == TargetPlatform.iOS) {
       IosDeviceInfo ios = await deviceInfo.iosInfo;
-      return ios.identifierForVendor ?? "unknown";
+      deviceId = ios.identifierForVendor ?? "ios-device";
     }
 
-    return "unknown-device";
+    await prefs.setString(deviceIdKey, deviceId);
+
+    return deviceId;
   }
 
   static Future<bool> isDeviceRegistered() async {
@@ -48,6 +56,7 @@ class DeviceService {
 
   static Future<void> clearDevice() async {
     final prefs = await SharedPreferences.getInstance();
+
     await prefs.remove(deviceRegisteredKey);
     await prefs.remove(deviceIdKey);
   }

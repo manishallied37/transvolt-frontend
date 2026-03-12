@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
-import 'reset_password_screen.dart';
 import '../services/auth_service.dart';
-import 'dashboard_screen.dart';
 import '../services/device_service.dart';
+import 'reset_password_screen.dart';
+import 'dashboard_screen.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String identifier;
@@ -19,128 +19,121 @@ class OtpVerificationScreen extends StatefulWidget {
   });
 
   @override
-  State<OtpVerificationScreen> createState() => _OtpScreenState();
+  State<OtpVerificationScreen> createState() => _OtpVerificationScreenState();
 }
 
-class _OtpScreenState extends State<OtpVerificationScreen> {
-  String otp = "";
+class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
+  String _otp = "";
+  final TextEditingController _otpController = TextEditingController();
 
-  int seconds = 60;
-  Timer? timer;
+  int _seconds = 120;
+  Timer? _timer;
 
-  bool loading = false;
-  bool resendLoading = false;
+  bool _loading = false;
+  bool _resendLoading = false;
 
   @override
   void initState() {
     super.initState();
-    debugPrint("IDENTIFIER: ${widget.identifier}");
-    debugPrint("METHOD: ${widget.method}");
-    debugPrint("FLOW: ${widget.flow}");
-    startTimer();
+    _startTimer();
   }
 
   @override
   void dispose() {
-    timer?.cancel();
+    _timer?.cancel();
     super.dispose();
   }
 
-  void startTimer() {
-    timer?.cancel();
+  void _startTimer() {
+    _timer?.cancel();
 
-    setState(() {
-      seconds = 60;
-    });
+    if (mounted) {
+      setState(() {
+        _seconds = 120;
+      });
+    }
 
-    timer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (seconds == 0) {
-        t.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_seconds <= 0) {
+        timer.cancel();
       } else {
-        setState(() {
-          seconds--;
-        });
+        if (mounted) {
+          setState(() {
+            _seconds--;
+          });
+        }
       }
     });
   }
 
-  Future<void> resendOtp() async {
-    if (seconds > 0 || resendLoading) return;
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
 
-    setState(() {
-      resendLoading = true;
-    });
+  Future<void> _resendOtp() async {
+    if (_seconds > 0 || _resendLoading) return;
+
+    setState(() => _resendLoading = true);
 
     try {
-      bool success = await AuthService.sendOtp(
+      final success = await AuthService.sendOtp(
         widget.identifier,
         widget.method,
       );
 
       if (!mounted) return;
 
-      setState(() {
-        resendLoading = false;
-      });
+      setState(() => _resendLoading = false);
 
       if (success) {
-        startTimer();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("OTP resent successfully")),
-        );
+        _otpController.clear();
+        _otp = "";
+        _startTimer();
+        _showMessage("OTP resent successfully");
       } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Failed to resend OTP")));
+        _showMessage("Failed to resend OTP");
       }
     } catch (e) {
-      setState(() {
-        resendLoading = false;
-      });
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Something went wrong")));
+      if (mounted) {
+        setState(() => _resendLoading = false);
+      }
+      _showMessage("Something went wrong");
     }
   }
 
-  Future<void> verifyOtp() async {
-    if (otp.length != 6) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Enter 6 digit OTP")));
+  Future<void> _verifyOtp() async {
+    if (_loading) return;
+    if (_otp.length != 6) {
+      _showMessage("Enter 6 digit OTP");
       return;
     }
 
-    setState(() {
-      loading = true;
-    });
+    setState(() => _loading = true);
 
     try {
-      String deviceId = await DeviceService.getDeviceId();
+      final deviceId = await DeviceService.getDeviceId();
 
       bool success;
 
       if (widget.flow == "login") {
         success = await AuthService.verifyLoginOtp(
           widget.identifier,
-          otp,
+          _otp,
           deviceId,
         );
       } else {
         success = await AuthService.verifyOtp(
           widget.identifier,
-          otp,
+          _otp,
           widget.method,
         );
       }
 
       if (!mounted) return;
 
-      setState(() {
-        loading = false;
-      });
+      setState(() => _loading = false);
 
       if (success) {
         if (widget.flow == "login") {
@@ -160,22 +153,17 @@ class _OtpScreenState extends State<OtpVerificationScreen> {
           );
         }
       } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Invalid OTP")));
+        _showMessage("Invalid OTP");
       }
     } catch (e) {
-      setState(() {
-        loading = false;
-      });
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Verification failed")));
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+      _showMessage(e.toString().replaceAll("Exception:", "").trim());
     }
   }
 
-  String maskIdentifier() {
+  String _maskIdentifier() {
     final id = widget.identifier;
 
     if (id.isEmpty) return "";
@@ -185,8 +173,12 @@ class _OtpScreenState extends State<OtpVerificationScreen> {
     }
 
     if (widget.method == "email" && id.contains("@")) {
-      int index = id.indexOf("@");
-      return '${id.substring(0, 2)}****${id.substring(index)}';
+      final index = id.indexOf("@");
+      final prefix = id.substring(0, index);
+
+      final visible = prefix.length > 2 ? prefix.substring(0, 2) : prefix;
+
+      return "$visible****${id.substring(index)}";
     }
 
     return id;
@@ -204,11 +196,7 @@ class _OtpScreenState extends State<OtpVerificationScreen> {
               const SizedBox(height: 40),
 
               Center(
-                child: Image.asset(
-                  "images/transvolt_logo.png",
-                  height: 120,
-                  fit: BoxFit.contain,
-                ),
+                child: Image.asset("images/transvolt_logo.png", height: 120),
               ),
 
               const SizedBox(height: 20),
@@ -222,7 +210,7 @@ class _OtpScreenState extends State<OtpVerificationScreen> {
               const SizedBox(height: 10),
 
               Text(
-                "Enter the 6-digit code sent to ${maskIdentifier()}",
+                "Enter the 6-digit code sent to ${_maskIdentifier()}",
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.grey),
               ),
@@ -232,10 +220,11 @@ class _OtpScreenState extends State<OtpVerificationScreen> {
               PinCodeTextField(
                 length: 6,
                 appContext: context,
+                controller: _otpController,
                 keyboardType: TextInputType.number,
                 animationType: AnimationType.fade,
                 onChanged: (value) {
-                  otp = value;
+                  _otp = value;
                 },
                 pinTheme: PinTheme(
                   shape: PinCodeFieldShape.box,
@@ -253,8 +242,8 @@ class _OtpScreenState extends State<OtpVerificationScreen> {
               SizedBox(
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: loading ? null : verifyOtp,
-                  child: loading
+                  onPressed: _loading ? null : _verifyOtp,
+                  child: _loading
                       ? const SizedBox(
                           height: 22,
                           width: 22,
@@ -270,15 +259,15 @@ class _OtpScreenState extends State<OtpVerificationScreen> {
               const SizedBox(height: 25),
 
               Center(
-                child: seconds == 0
-                    ? resendLoading
+                child: _seconds == 0
+                    ? _resendLoading
                           ? const CircularProgressIndicator()
                           : TextButton(
-                              onPressed: resendOtp,
+                              onPressed: _resendOtp,
                               child: const Text("Resend OTP"),
                             )
                     : Text(
-                        "Resend OTP in $seconds sec",
+                        "Resend OTP in $_seconds sec",
                         style: const TextStyle(color: Colors.grey),
                       ),
               ),

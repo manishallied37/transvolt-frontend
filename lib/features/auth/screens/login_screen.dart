@@ -13,32 +13,39 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  final TextEditingController loginController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
+  final _loginController = TextEditingController();
+  final _passwordController = TextEditingController();
 
-  bool hidePassword = true;
-  bool loading = false;
+  bool _hidePassword = true;
+  bool _loading = false;
 
-  Future<void> login() async {
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _login() async {
+    if (_loading) return;
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      loading = true;
-    });
+    setState(() => _loading = true);
 
     try {
-      String deviceId = await DeviceService.getDeviceId();
+      final deviceId = await DeviceService.getDeviceId();
 
       final result = await AuthService.login(
-        loginController.text.trim(),
-        passwordController.text.trim(),
+        _loginController.text.trim(),
+        _passwordController.text.trim(),
         deviceId,
       );
 
       if (!mounted) return;
 
       if (result != null) {
-        debugPrint("LOGIN RESULT: $result");
+        _loginController.clear();
+        _passwordController.clear();
+
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -50,26 +57,33 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Invalid username or password")),
-        );
+        _showMessage("Invalid username or password");
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Something went wrong. Try again.")),
-      );
+      _showMessage(e.toString().replaceAll("Exception:", "").trim());
     }
 
-    setState(() {
-      loading = false;
-    });
+    if (mounted) {
+      setState(() => _loading = false);
+    }
   }
 
   @override
   void dispose() {
-    loginController.dispose();
-    passwordController.dispose();
+    _loginController.dispose();
+    _passwordController.dispose();
     super.dispose();
+  }
+
+  InputDecoration _inputDecoration({
+    required String label,
+    Widget? suffixIcon,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      border: const OutlineInputBorder(),
+      suffixIcon: suffixIcon,
+    );
   }
 
   @override
@@ -86,16 +100,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 40),
 
                 Center(
-                  child: Image.asset(
-                    "images/transvolt_logo.png",
-                    height: 120,
-                    fit: BoxFit.contain,
-                  ),
+                  child: Image.asset("images/transvolt_logo.png", height: 120),
                 ),
 
                 const SizedBox(height: 20),
 
-                /// TITLE
                 const Text(
                   "Welcome Back",
                   textAlign: TextAlign.center,
@@ -113,13 +122,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 40),
 
                 TextFormField(
-                  controller: loginController,
+                  controller: _loginController,
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    labelText: "Username or Email",
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: _inputDecoration(label: "Username or Email"),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return "Enter username or email";
@@ -131,31 +137,28 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 20),
 
                 TextFormField(
-                  controller: passwordController,
-                  obscureText: hidePassword,
+                  controller: _passwordController,
+                  obscureText: _hidePassword,
                   textInputAction: TextInputAction.done,
-                  onFieldSubmitted: (_) => login(),
-                  decoration: InputDecoration(
-                    labelText: "Password",
-                    border: const OutlineInputBorder(),
+                  onFieldSubmitted: (_) => _login(),
+                  decoration: _inputDecoration(
+                    label: "Password",
                     suffixIcon: IconButton(
                       icon: Icon(
-                        hidePassword ? Icons.visibility_off : Icons.visibility,
+                        _hidePassword ? Icons.visibility_off : Icons.visibility,
                       ),
                       onPressed: () {
                         setState(() {
-                          hidePassword = !hidePassword;
+                          _hidePassword = !_hidePassword;
                         });
                       },
                     ),
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
+                    if (value == null || value.trim().isEmpty) {
                       return "Enter password";
                     }
-                    if (value.length < 6) {
-                      return "Password must be at least 6 characters";
-                    }
+
                     return null;
                   },
                 ),
@@ -165,8 +168,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 SizedBox(
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: loading ? null : login,
-                    child: loading
+                    onPressed: _loading ? null : _login,
+                    child: _loading
                         ? const SizedBox(
                             height: 22,
                             width: 22,

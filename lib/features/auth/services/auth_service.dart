@@ -8,6 +8,57 @@ class AuthService {
   static String baseUrl = dotenv.env['API_URL']!;
   static Dio dio = Dio(BaseOptions(baseUrl: baseUrl));
 
+  static void setupInterceptors() {
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          if (options.path.contains("/auth/login") ||
+              options.path.contains("/auth/register") ||
+              options.path.contains("/auth/send-otp") ||
+              options.path.contains("/auth/verify-otp") ||
+              options.path.contains("/auth/refresh") ||
+              options.path.contains("/auth/verify-login-otp")) {
+            return handler.next(options);
+          }
+
+          final token = await TokenStorage.getAccessToken();
+
+          if (token != null) {
+            options.headers["Authorization"] = "Bearer $token";
+          }
+
+          handler.next(options);
+        },
+
+        onError: (DioException e, handler) async {
+          if (e.requestOptions.path.contains("/auth/refresh")) {
+            return handler.next(e);
+          }
+
+          if (e.requestOptions.path.contains("/auth/logout")) {
+            return handler.next(e);
+          }
+
+          if (e.response?.statusCode == 401) {
+            bool refreshed = await AuthService.refreshAccessToken();
+
+            if (refreshed) {
+              final token = await TokenStorage.getAccessToken();
+              e.requestOptions.headers["Authorization"] = "Bearer $token";
+
+              final response = await dio.fetch(e.requestOptions);
+              return handler.resolve(response);
+            } else {
+              await TokenStorage.clearTokens();
+            }
+          }
+
+          handler.next(e);
+        },
+      ),
+    );
+  }
+
   static Future<Map<String, dynamic>?> login(
     String login,
     String password,
@@ -97,7 +148,7 @@ class AuthService {
 
       debugPrint("REGISTER RESPONSE: ${response.data}");
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 201) {
         final data = response.data;
 
         await TokenStorage.saveAccessToken(data["tokens"]["accessToken"]);
@@ -189,8 +240,8 @@ class AuthService {
       if (response.statusCode == 200) {
         final data = response.data;
 
-        await TokenStorage.saveAccessToken(data["accessToken"]);
-        await TokenStorage.saveRefreshToken(data["refreshToken"]);
+        await TokenStorage.saveAccessToken(data["tokens"]["accessToken"]);
+        await TokenStorage.saveRefreshToken(data["tokens"]["refreshToken"]);
 
         return true;
       }
@@ -203,5 +254,19 @@ class AuthService {
       debugPrint("Verify Login OTP Error: $e");
       return false;
     }
+  }
+
+  static Future<void> logout() async {
+    try {
+      await dio.post("/auth/logout");
+    } catch (_) {}
+
+    await TokenStorage.clearTokens();
+  }
+
+  static Future<void> logoutAllDevices() async {
+    await dio.post("/auth/logout-all");
+
+    await TokenStorage.clearTokens();
   }
 }

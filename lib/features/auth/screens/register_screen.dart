@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
 import '../services/auth_service.dart';
 import '../services/device_service.dart';
-import 'package:intl_phone_field/intl_phone_field.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -13,43 +13,52 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  final usernameController = TextEditingController();
-  final emailController = TextEditingController();
-  final mobileController = TextEditingController();
-  final passwordController = TextEditingController();
-  final confirmPasswordController = TextEditingController();
-  final roleController = TextEditingController();
-  final regionController = TextEditingController();
-  final depotController = TextEditingController();
-  String fullMobileNumber = "";
-  final passwordRegex = RegExp(
-    r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$',
-  );
+  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _mobileController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  final _regionController = TextEditingController();
+  final _depotController = TextEditingController();
 
-  bool loading = false;
-  bool hidePassword = true;
-  bool hideConfirmPassword = true;
-  String? selectedRole;
+  bool _loading = false;
+  bool _hidePassword = true;
+  bool _hideConfirmPassword = true;
 
-  Future<void> register() async {
+  String? _selectedRole;
+  String _fullMobileNumber = "";
+
+  final RegExp _emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+
+  Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      loading = true;
-    });
+    setState(() => _loading = true);
+
+    if (_selectedRole == null) {
+      _showError("Please select role");
+      setState(() => _loading = false);
+      return;
+    }
 
     try {
-      String deviceId = await DeviceService.getDeviceId();
+      if (_fullMobileNumber.isEmpty) {
+        _showError("Enter valid phone number");
+        setState(() => _loading = false);
+        return;
+      }
 
-      bool success = await AuthService.register(
-        usernameController.text.trim(),
-        emailController.text.trim(),
-        passwordController.text.trim(),
-        selectedRole!,
-        regionController.text.trim(),
-        depotController.text.trim(),
+      final deviceId = await DeviceService.getDeviceId();
+
+      final success = await AuthService.register(
+        _usernameController.text.trim(),
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
+        _selectedRole!,
+        _regionController.text.trim(),
+        _depotController.text.trim(),
         deviceId,
-        fullMobileNumber,
+        _fullMobileNumber,
       );
 
       if (!mounted) return;
@@ -57,36 +66,44 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (success) {
         Navigator.pushReplacementNamed(context, "/dashboard");
       } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Registration failed")));
+        _showError("Registration failed");
       }
-    } catch (e, stack) {
-      debugPrint("Register error: $e");
-      debugPrint(stack.toString());
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Error: $e")));
-    } finally {
-      if (mounted) {
-        setState(() {
-          loading = false;
-        });
-      }
+    } catch (e) {
+      _showError(e.toString().replaceAll("Exception:", "").trim());
     }
+
+    if (mounted) {
+      setState(() => _loading = false);
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  InputDecoration _inputDecoration({
+    required String label,
+    Widget? suffixIcon,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      border: const OutlineInputBorder(),
+      suffixIcon: suffixIcon,
+      errorMaxLines: 6,
+    );
   }
 
   @override
   void dispose() {
-    usernameController.dispose();
-    emailController.dispose();
-    mobileController.dispose();
-    passwordController.dispose();
-    confirmPasswordController.dispose();
-    roleController.dispose();
-    regionController.dispose();
-    depotController.dispose();
+    _usernameController.dispose();
+    _emailController.dispose();
+    _mobileController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    _regionController.dispose();
+    _depotController.dispose();
     super.dispose();
   }
 
@@ -105,11 +122,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 30),
 
                 Center(
-                  child: Image.asset(
-                    "images/transvolt_logo.png",
-                    height: 120,
-                    fit: BoxFit.contain,
-                  ),
+                  child: Image.asset("images/transvolt_logo.png", height: 120),
                 ),
 
                 const SizedBox(height: 20),
@@ -123,11 +136,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 30),
 
                 TextFormField(
-                  controller: usernameController,
-                  decoration: const InputDecoration(
-                    labelText: "Username",
-                    border: OutlineInputBorder(),
-                  ),
+                  controller: _usernameController,
+                  decoration: _inputDecoration(label: "Username"),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return "Enter username";
@@ -139,17 +149,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 16),
 
                 TextFormField(
-                  controller: emailController,
+                  controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: "Email",
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: _inputDecoration(label: "Email"),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return "Enter email";
                     }
-                    if (!value.contains("@")) {
+                    if (!_emailRegex.hasMatch(value)) {
                       return "Enter valid email";
                     }
                     return null;
@@ -159,14 +166,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 16),
 
                 IntlPhoneField(
-                  controller: mobileController,
+                  controller: _mobileController,
                   decoration: const InputDecoration(
                     labelText: "Phone Number",
                     border: OutlineInputBorder(),
                   ),
                   initialCountryCode: 'IN',
                   onChanged: (phone) {
-                    fullMobileNumber = phone.completeNumber;
+                    _fullMobileNumber = phone.completeNumber;
                   },
                   validator: (phone) {
                     if (phone == null || phone.number.isEmpty) {
@@ -175,9 +182,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     if (phone.number.length < 10) {
                       return "Enter valid phone number";
                     }
-                    if (fullMobileNumber.isEmpty) {
-                      return "Enter phone number";
-                    }
                     return null;
                   },
                 ),
@@ -185,22 +189,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 16),
 
                 TextFormField(
-                  controller: passwordController,
-                  obscureText: hidePassword,
-                  onChanged: (value) {
-                    setState(() {});
-                  },
-                  decoration: InputDecoration(
-                    labelText: "Password",
-                    border: const OutlineInputBorder(),
-                    errorMaxLines: 2,
+                  controller: _passwordController,
+                  obscureText: _hidePassword,
+                  decoration: _inputDecoration(
+                    label: "Password",
                     suffixIcon: IconButton(
                       icon: Icon(
-                        hidePassword ? Icons.visibility_off : Icons.visibility,
+                        _hidePassword ? Icons.visibility_off : Icons.visibility,
                       ),
                       onPressed: () {
                         setState(() {
-                          hidePassword = !hidePassword;
+                          _hidePassword = !_hidePassword;
                         });
                       },
                     ),
@@ -209,33 +208,53 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     if (value == null || value.isEmpty) {
                       return "Enter password";
                     }
-                    if (!passwordRegex.hasMatch(value)) {
-                      return "Password must contain upper, lower, number & special characters";
+
+                    final pwd = value.trim();
+
+                    List<String> errors = [];
+
+                    if (!RegExp(r'[A-Z]').hasMatch(pwd)) {
+                      errors.add("• Uppercase letter");
                     }
-                    return null;
+
+                    if (!RegExp(r'[a-z]').hasMatch(pwd)) {
+                      errors.add("• Lowercase letter");
+                    }
+
+                    if (!RegExp(r'\d').hasMatch(pwd)) {
+                      errors.add("• Number");
+                    }
+
+                    if (!RegExp(r'[@\$!%*?&]').hasMatch(pwd)) {
+                      errors.add("• Special character");
+                    }
+
+                    if (pwd.length < 8) {
+                      errors.add("• Minimum 8 characters");
+                    }
+
+                    if (errors.isEmpty) return null;
+
+                    return "Password must contain:\n${errors.join("\n")}";
                   },
                 ),
 
                 const SizedBox(height: 16),
 
                 TextFormField(
-                  controller: confirmPasswordController,
-                  obscureText: hideConfirmPassword,
-                  onChanged: (value) {
-                    setState(() {});
-                  },
-                  decoration: InputDecoration(
-                    labelText: "Confirm Password",
-                    border: const OutlineInputBorder(),
+                  controller: _confirmPasswordController,
+                  obscureText: _hideConfirmPassword,
+                  decoration: _inputDecoration(
+                    label: "Confirm Password",
                     suffixIcon: IconButton(
                       icon: Icon(
-                        hideConfirmPassword
+                        _hideConfirmPassword
                             ? Icons.visibility_off
                             : Icons.visibility,
                       ),
                       onPressed: () {
                         setState(() {
-                          hideConfirmPassword = !hideConfirmPassword;
+                          _hideConfirmPassword = !_hideConfirmPassword;
                         });
                       },
                     ),
@@ -245,7 +264,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       return "Confirm your password";
                     }
 
-                    if (value != passwordController.text) {
+                    if (value.trim() != _passwordController.text.trim()) {
                       return "Passwords do not match";
                     }
 
@@ -256,11 +275,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 16),
 
                 DropdownButtonFormField<String>(
-                  initialValue: selectedRole,
-                  decoration: const InputDecoration(
-                    labelText: "Role",
-                    border: OutlineInputBorder(),
-                  ),
+                  initialValue: _selectedRole,
+                  decoration: _inputDecoration(label: "Role"),
                   items: const [
                     DropdownMenuItem(
                       value: "Authority",
@@ -277,8 +293,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ],
                   onChanged: (value) {
                     setState(() {
-                      selectedRole = value;
-                      roleController.text = value!;
+                      _selectedRole = value;
                     });
                   },
                   validator: (value) {
@@ -292,21 +307,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 16),
 
                 TextFormField(
-                  controller: regionController,
-                  decoration: const InputDecoration(
-                    labelText: "Region",
-                    border: OutlineInputBorder(),
-                  ),
+                  controller: _regionController,
+                  decoration: _inputDecoration(label: "Region"),
                 ),
 
                 const SizedBox(height: 16),
 
                 TextFormField(
-                  controller: depotController,
-                  decoration: const InputDecoration(
-                    labelText: "Depot",
-                    border: OutlineInputBorder(),
-                  ),
+                  controller: _depotController,
+                  decoration: _inputDecoration(label: "Depot"),
                 ),
 
                 const SizedBox(height: 30),
@@ -314,8 +323,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 SizedBox(
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: loading ? null : register,
-                    child: loading
+                    onPressed: _loading ? null : _register,
+                    child: _loading
                         ? const SizedBox(
                             height: 22,
                             width: 22,

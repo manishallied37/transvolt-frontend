@@ -28,6 +28,7 @@ class TokenStorage {
   }
 
   static Future<void> clearTokens() async {
-    await storage.deleteAll();
+    await storage.delete(key: accessTokenKey);
+    await storage.delete(key: refreshTokenKey);
   }
 }
