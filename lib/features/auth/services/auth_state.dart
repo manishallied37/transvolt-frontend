@@ -8,6 +8,16 @@ class AuthState {
 
     if (token == null) return null;
 
+    if (JwtDecoder.isExpired(token)) {
+      bool refreshed = await AuthService.refreshAccessToken();
+
+      if (!refreshed) return null;
+
+      token = await TokenStorage.getAccessToken();
+    }
+
+    if (token == null) return null;
+
     return JwtDecoder.decode(token);
   }
 
