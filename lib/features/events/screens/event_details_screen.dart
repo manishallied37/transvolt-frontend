@@ -1,7 +1,7 @@
 // import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'media_details_screen.dart';
+import '/features/media/screens/media_details_screen.dart';
 import 'escalation_form_screen.dart';
 
 import 'package:flutter_map/flutter_map.dart' as fm;
