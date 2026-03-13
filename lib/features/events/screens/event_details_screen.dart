@@ -161,47 +161,71 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                             children: [
                               /// LEFT DETAILS
                               Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _kvRow('Event ID', id?.toString() ?? '—'),
-                                    const SizedBox(height: 8),
-                                    _kvRow('Vehicle No', vehicleNo),
-                                    const SizedBox(height: 8),
-                                    _kvRow('VIN', vin),
-                                    const SizedBox(height: 8),
-                                    _kvRow(
-                                      'Driver',
-                                      (driverName.isEmpty
-                                          ? '—'
-                                          : '$driverName '),
-                                    ),
-                                  ],
+                                child: MediaQuery(
+                                  data: MediaQuery.of(context).copyWith(
+                                    textScaler: const TextScaler.linear(1.0),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      _kvRow('Event ID', id?.toString() ?? '—'),
+                                      const SizedBox(height: 8),
+                                      _kvRow('Vehicle No', vehicleNo),
+                                      const SizedBox(height: 8),
+                                      _kvRow('VIN', vin),
+                                      const SizedBox(height: 8),
+                                      _kvRow(
+                                        'Driver',
+                                        (driverName.isEmpty ? '—' : '$driverName '),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
 
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 0),
 
                               /// RIGHT IMAGE
                               Transform.translate(
-                                offset: const Offset(-5, -5),
-                                child: Container(
-                                  width: 90,
-                                  height: 90,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.grey,
-                                      width: 2,
-                                    ),
-                                  ),
-                                  child: const CircleAvatar(
-                                    backgroundImage: NetworkImage(
-                                      'https://i.pravatar.cc/150',
+                                offset: const Offset(5, -35),
+                                child: GestureDetector(
+                                  onTap: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => Dialog(
+                                        backgroundColor: Colors.transparent,
+                                        child: InteractiveViewer(
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(12),
+                                            child: Image.network(
+                                              'https://i.pravatar.cc/150',
+                                              fit: BoxFit.contain,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child: FittedBox(
+                                    child: Container(
+                                      width: 60,
+                                      height: 60,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: Colors.grey,
+                                          width: 2,
+                                        ),
+                                      ),
+                                      child: const CircleAvatar(
+                                        backgroundImage: NetworkImage(
+                                          'https://i.pravatar.cc/150',
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
+                              )
                             ],
                           ),
                         ],

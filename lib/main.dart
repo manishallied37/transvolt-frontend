@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'features/auth/screens/splash_screen.dart';
 import 'features/auth/screens/login_screen.dart';
-import 'features/auth/screens/dashboard_screen.dart';
+// import 'features/dashboard/screens/dashboard_screen.dart';
 import 'features/auth/screens/register_screen.dart';
 import 'features/auth/screens/forget_password_screen.dart';
 import 'features/auth/services/auth_service.dart';
+import 'features/navigation/screens/main_navigation_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,8 +31,9 @@ class MyApp extends StatelessWidget {
       routes: {
         "/login": (context) => const LoginScreen(),
         "/register": (context) => const RegisterScreen(),
-        "/dashboard": (context) => const DashboardScreen(),
+        // "/dashboard": (context) => const DashboardScreen(),
         "/forgot-password": (context) => const ForgotPasswordScreen(),
+        "/home": (context) => const MainNavigationScreen(),
       },
 
       home: const SplashScreen(),
