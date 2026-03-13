@@ -17,10 +17,9 @@ class MainNavigationScreen extends StatefulWidget {
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
-
   int _currentIndex = 0;
 
-  void changeTab(int index){
+  void changeTab(int index) {
     setState(() {
       _currentIndex = index;
     });
@@ -35,7 +34,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   ];
 
   Future<bool> _handleBack() async {
-
     /// if not on dashboard → go back to dashboard
     if (_currentIndex != 0) {
       setState(() {
@@ -52,27 +50,26 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         content: const Text("Do you want to logout?"),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context,false),
+            onPressed: () => Navigator.pop(context, false),
             child: const Text("Cancel"),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context,true),
+            onPressed: () => Navigator.pop(context, true),
             child: const Text("Logout"),
           ),
         ],
       ),
     );
 
-    if(confirm == true){
-
+    if (confirm == true) {
       await TokenStorage.clearTokens();
 
-      if(!mounted) return false;
+      if (!mounted) return false;
 
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const LoginScreen()),
-            (route) => false,
+        (route) => false,
       );
     }
 
@@ -81,45 +78,42 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+        if (didPop) return;
 
-    return WillPopScope(
+        final navigator = Navigator.of(context);
 
-      onWillPop: _handleBack,
+        bool shouldPop = await _handleBack();
 
+        if (shouldPop) {
+          navigator.pop();
+        }
+      },
       child: Scaffold(
-
         body: _screens[_currentIndex],
-
         bottomNavigationBar: BottomNavigationBar(
-
           currentIndex: _currentIndex,
-
           onTap: changeTab,
-
           type: BottomNavigationBarType.fixed,
-
           items: const [
-
             BottomNavigationBarItem(
               icon: Icon(Icons.dashboard_outlined),
               label: "Dashboard",
             ),
-
             BottomNavigationBarItem(
               icon: Icon(Icons.warning_amber_outlined),
               label: "Events",
             ),
-
             BottomNavigationBarItem(
               icon: Icon(Icons.videocam_outlined),
               label: "Stream",
             ),
-
             BottomNavigationBarItem(
               icon: Icon(Icons.report_problem_outlined),
               label: "Escalation",
             ),
-
             BottomNavigationBarItem(
               icon: Icon(Icons.bar_chart_outlined),
               label: "Reports",

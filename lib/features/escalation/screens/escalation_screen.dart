@@ -1,4 +1,3 @@
-// TODO Implement this library.
 import 'package:flutter/material.dart';
 
 class EscalationScreen extends StatelessWidget {
@@ -6,10 +5,6 @@ class EscalationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Text("Escalation Screen"),
-      ),
-    );
+    return const Scaffold(body: Center(child: Text("Escalation Screen")));
   }
 }

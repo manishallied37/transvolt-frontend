@@ -40,7 +40,7 @@ class DashboardScreen extends StatelessWidget {
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const LoginScreen()),
-          (route) => false,
+      (route) => false,
     );
   }
 
@@ -71,7 +71,7 @@ class DashboardScreen extends StatelessWidget {
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const LoginScreen()),
-            (route) => false,
+        (route) => false,
       );
     }
 
@@ -80,24 +80,32 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () => _onBackPressed(context),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+        if (didPop) return;
+
+        final navigator = Navigator.of(context);
+
+        bool shouldPop = await _onBackPressed(context);
+
+        if (shouldPop) {
+          navigator.pop();
+        }
+      },
 
       child: Scaffold(
         appBar: AppBar(
           title: const Text("Dashboard"),
 
           actions: [
-
             /// Bell Icon
             IconButton(
               icon: const Icon(Icons.notifications_none),
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const EventsScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const EventsScreen()),
                 );
               },
             ),
@@ -137,7 +145,6 @@ class DashboardScreen extends StatelessWidget {
             child: ListView(
               padding: EdgeInsets.zero,
               children: [
-
                 /// Dynamic User Header
                 FutureBuilder(
                   future: Future.wait([
@@ -184,9 +191,7 @@ class DashboardScreen extends StatelessWidget {
 
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => const EventsScreen(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const EventsScreen()),
                     );
                   },
                 ),

@@ -1,7 +1,9 @@
 import 'dart:async';
 
+import 'package:flutter/widgets.dart';
+
 class PollingService {
-    Timer? _timer;
+  Timer? _timer;
 
   void start({
     required Duration interval,
@@ -11,7 +13,7 @@ class PollingService {
       try {
         await task();
       } catch (e) {
-        print("Polling error: $e");
+        debugPrint("Polling error: $e");
       }
     });
   }

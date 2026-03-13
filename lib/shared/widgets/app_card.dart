@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 class AppCard extends StatefulWidget {
-
   final Widget child;
   final EdgeInsets padding;
   final VoidCallback? onTap;
@@ -18,7 +17,6 @@ class AppCard extends StatefulWidget {
 }
 
 class _AppCardState extends State<AppCard> {
-
   double scale = 1.0;
 
   void _tapDown(TapDownDetails details) {
@@ -41,7 +39,6 @@ class _AppCardState extends State<AppCard> {
 
   @override
   Widget build(BuildContext context) {
-
     return AnimatedScale(
       scale: scale,
       duration: const Duration(milliseconds: 120),
@@ -63,10 +60,10 @@ class _AppCardState extends State<AppCard> {
               borderRadius: BorderRadius.circular(18),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 14,
                   offset: const Offset(0, 6),
-                )
+                ),
               ],
             ),
             child: widget.child,

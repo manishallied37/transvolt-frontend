@@ -13,22 +13,18 @@ import '../widgets/depot_overview_card.dart';
 
 import '../controllers/alert_controller.dart';
 import '../models/alert_model.dart';
+import '../../auth/services/auth_state.dart';
 
 class DashboardScreen extends StatefulWidget {
-
   final Function(int) onNavigate;
 
-  const DashboardScreen({
-    super.key,
-    required this.onNavigate,
-  });
+  const DashboardScreen({super.key, required this.onNavigate});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-
   bool editMode = false;
 
   final ScrollController scrollController = ScrollController();
@@ -53,11 +49,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> loadDashboardData() async {
-
     dashboardData = await DashboardApiService.fetchDashboardData();
 
     dashboardWidgets = [
-
       EventCategoryChart(
         key: const ValueKey("chart"),
         critical: dashboardData?.critical ?? 0,
@@ -116,9 +110,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   /// Poll alerts automatically
   void startAlertPolling() {
-
     pollingService.start(
-
       interval: const Duration(seconds: 5),
 
       task: fetchAlerts,
@@ -127,13 +119,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   /// Fetch alerts
   Future<void> fetchAlerts() async {
-
     final alertMetrics = await alertController.getDashboardMetrics();
 
     int newCount = alertMetrics["alertCount"] ?? 0;
 
     if (newCount != alertCount) {
-
       setState(() {
         alertCount = newCount;
       });
@@ -146,19 +136,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   /// Alert popup
   void showAlertPopup(AlertModel alert) {
-
     showDialog(
       context: context,
       builder: (context) {
-
         return AlertDialog(
-
           title: const Text("🚨 New Alert"),
 
           content: Text("${alert.type}\nStatus: ${alert.status}"),
 
           actions: [
-
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
@@ -172,56 +158,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> logout() async {
-
     bool? confirm = await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-
         title: const Text("Logout"),
 
         content: const Text("Are you sure you want to logout?"),
 
         actions: [
-
           TextButton(
-            onPressed: ()=>Navigator.pop(context,false),
+            onPressed: () => Navigator.pop(context, false),
             child: const Text("Cancel"),
           ),
 
           ElevatedButton(
-            onPressed: ()=>Navigator.pop(context,true),
+            onPressed: () => Navigator.pop(context, true),
             child: const Text("Logout"),
           ),
         ],
       ),
     );
 
-    if(confirm != true) return;
+    if (confirm != true) return;
 
     await TokenStorage.clearTokens();
 
-    if(!mounted) return;
+    if (!mounted) return;
 
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      "/login",
-          (route)=>false,
-    );
+    Navigator.pushNamedAndRemoveUntil(context, "/login", (route) => false);
   }
 
   Future<bool> _onBackPressed() async {
-
     await logout();
 
     return false;
   }
 
   void _onReorder(int oldIndex, int newIndex) {
-
     if (!editMode) return;
 
     setState(() {
-
       if (oldIndex < newIndex) {
         newIndex -= 1;
       }
@@ -233,9 +209,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget buildDashboardGrid() {
-
     return ReorderableWrap(
-
       spacing: 10,
 
       runSpacing: 10,
@@ -245,17 +219,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       onReorder: _onReorder,
 
       children: dashboardWidgets.map((widget) {
-
         bool isChart = widget.key == const ValueKey("chart");
 
         return Container(
-
           key: widget.key,
 
           margin: const EdgeInsets.symmetric(vertical: 10),
 
           child: SizedBox(
-
             width: isChart
                 ? double.infinity
                 : (MediaQuery.of(context).size.width - 48) / 2,
@@ -263,7 +234,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             height: isChart ? 340 : 160,
 
             child: Material(
-
               elevation: 4,
 
               borderRadius: BorderRadius.circular(12),
@@ -277,27 +247,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget buildNormalGrid() {
-
     if (dashboardData == null) {
       return const Center(child: CircularProgressIndicator());
     }
 
     return Wrap(
-
       spacing: 10,
 
       runSpacing: 10,
 
       children: dashboardWidgets.map((widget) {
-
         bool isChart = widget.key == const ValueKey("chart");
 
         return Container(
-
           margin: const EdgeInsets.symmetric(vertical: 10),
 
           child: SizedBox(
-
             width: isChart
                 ? double.infinity
                 : (MediaQuery.of(context).size.width - 48) / 2,
@@ -317,7 +282,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   void dispose() {
-
     pollingService.stop();
 
     super.dispose();
@@ -325,17 +289,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+        if (didPop) return;
 
-    return WillPopScope(
-
-      onWillPop: _onBackPressed,
+        await _onBackPressed();
+      },
 
       child: Scaffold(
-
         body: SafeArea(
-
           child: SingleChildScrollView(
-
             controller: scrollController,
 
             physics: const ClampingScrollPhysics(),
@@ -343,36 +307,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
 
             child: Column(
-
               crossAxisAlignment: CrossAxisAlignment.start,
 
               children: [
-
                 const SizedBox(height: 10),
 
                 Row(
-
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
 
                   children: [
-
                     PopupMenuButton<String>(
-
-                      onSelected: (value){
-                        if(value=="logout"){
+                      onSelected: (value) {
+                        if (value == "logout") {
                           logout();
                         }
                       },
 
-                      itemBuilder: (context)=> const [
-
+                      itemBuilder: (context) => const [
                         PopupMenuItem(
-                          value:"logout",
+                          value: "logout",
                           child: Row(
-                            children:[
+                            children: [
                               Icon(Icons.logout),
-                              SizedBox(width:10),
-                              Text("Logout")
+                              SizedBox(width: 10),
+                              Text("Logout"),
                             ],
                           ),
                         ),
@@ -387,28 +345,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                     Row(
                       children: [
-
                         GestureDetector(
-
-                          onTap: (){
+                          onTap: () {
                             widget.onNavigate(1);
                           },
 
                           child: Stack(
-
                             children: [
+                              const Icon(Icons.notifications_none, size: 28),
 
-                              const Icon(Icons.notifications_none,size:28),
-
-                              if(alertCount>0)
+                              if (alertCount > 0)
                                 Positioned(
+                                  right: 0,
 
-                                  right:0,
+                                  top: 0,
 
-                                  top:0,
-
-                                  child:Container(
-
+                                  child: Container(
                                     padding: const EdgeInsets.all(4),
 
                                     decoration: const BoxDecoration(
@@ -429,14 +381,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ),
 
-                        const SizedBox(width:10),
+                        const SizedBox(width: 10),
 
                         IconButton(
-
                           icon: Icon(editMode ? Icons.check : Icons.edit),
 
-                          onPressed: (){
-
+                          onPressed: () {
                             setState(() {
                               editMode = !editMode;
                             });
@@ -449,9 +399,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                 const SizedBox(height: 20),
 
-                const Text(
-                  "Welcome, John",
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                FutureBuilder(
+                  future: AuthState.getUsername(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return const Text(
+                        "Welcome",
+                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                      );
+                    }
+
+                    final username = snapshot.data ?? "User";
+
+                    return Text(
+                      "Welcome, ${username[0].toUpperCase()}${username.substring(1)}",
+                      style: const TextStyle(fontSize: 16, color: Colors.grey),
+                    );
+                  },
                 ),
 
                 const Text(

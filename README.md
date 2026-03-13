@@ -1,24 +1,66 @@
-# alert_dashboard
+# Transvolt Frontend
 
-Flutter version 3.41.3  
-Dart version 3.11.1  
-DevTools version 2.54.1  
+Flutter frontend application for the **Transvolt platform**.
 
-List of commands to be aware of--  
-  
-flutter devices -- To list all connectable devices  
-flutter doctor -- To check health  
-flutter doctor -v -- To check total health  
-flutter run -- To run the application on a device(Device list will show up)  
-flutter run -d <device_name> -- To run the application in certain device  
-flutter clean -- To clean the packages  
-flutter pub get -- To restore cleaned packages  
+---
 
-Goto ROOT and run  
-flutter pub get -- To download dependencies  
-and then run     
-flutter run -d <device_name> -- to run on wirelessly connected mobile device OR  
-Device name can be get by `flutter devices` command  
-flutter run -- to run on Web browser  
+## Tech Stack
 
-In .env set the BACKEND URL
+| Tool     | Version |
+| -------- | ------- |
+| Flutter  | 3.41.3  |
+| Dart     | 3.11.1  |
+| DevTools | 2.54.1  |
+
+---
+
+## Prerequisites
+
+Make sure the following tools are installed:
+
+- Flutter SDK **3.41.3**
+- Dart **3.11.1**
+- Android Studio / VS Code
+- Chrome (for web testing)
+- Android/iOS device or emulator
+
+Verify installation:
+
+```bash
+flutter doctor -v
+Project Setup
+1. Clone Repository
+git clone <repository-url>
+cd transvolt_frontend
+2. Install Dependencies
+
+From the project root directory, run:
+
+flutter pub get
+
+This command downloads all required dependencies.
+
+3. Configure Environment
+
+Open the .env file and configure the backend API URL.
+
+Example:
+
+BACKEND_URL=https://your-backend-domain.com
+Running the Application
+List Available Devices
+flutter devices
+
+This command shows all available devices (mobile, emulator, web).
+
+Run on Mobile Device
+flutter run -d <device_name>
+
+Example:
+
+flutter run -d android
+Run on Web Browser
+flutter run
+
+This will launch the application in a web browser.
+```
