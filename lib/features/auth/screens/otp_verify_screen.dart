@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
+
 import '../services/auth_service.dart';
 import '../services/device_service.dart';
 import 'reset_password_screen.dart';
-import 'dashboard_screen.dart';
+import '../../navigation/screens/main_navigation_screen.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String identifier;
@@ -41,17 +42,16 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   @override
   void dispose() {
     _timer?.cancel();
+    _otpController.dispose();
     super.dispose();
   }
 
   void _startTimer() {
     _timer?.cancel();
 
-    if (mounted) {
-      setState(() {
-        _seconds = 120;
-      });
-    }
+    setState(() {
+      _seconds = 120;
+    });
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_seconds <= 0) {
@@ -105,6 +105,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
   Future<void> _verifyOtp() async {
     if (_loading) return;
+
     if (_otp.length != 6) {
       _showMessage("Enter 6 digit OTP");
       return;
@@ -139,7 +140,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         if (widget.flow == "login") {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => const DashboardScreen()),
+            MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
           );
         } else {
           Navigator.push(
