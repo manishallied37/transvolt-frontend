@@ -222,6 +222,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                 length: 6,
                 appContext: context,
                 controller: _otpController,
+                autoDisposeControllers: false,
                 keyboardType: TextInputType.number,
                 animationType: AnimationType.fade,
                 onChanged: (value) {
