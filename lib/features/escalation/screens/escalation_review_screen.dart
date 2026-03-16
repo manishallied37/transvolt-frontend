@@ -121,7 +121,7 @@ class _EscalationReviewScreenState extends State<EscalationReviewScreen> {
 
   Future<void> _openFile(Map file) async {
     // Prepend base URL, strip /api since uploads are served from root
-    final baseUrl = api.baseUrl.replaceAll('/api', ''); // http://localhost:5000
+    final baseUrl = api.baseUrl; // http://localhost:5000
     final relativePath = file["file_url"] as String? ?? "";
     final fullUrl =
         "$baseUrl$relativePath"; // http://localhost:5000/uploads/evidence/xxx.jpg

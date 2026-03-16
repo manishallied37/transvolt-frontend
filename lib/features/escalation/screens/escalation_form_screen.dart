@@ -28,7 +28,8 @@ class _EscalationFormScreenState extends State<EscalationFormScreen> {
   // — Getters —
   String get eventId => widget.event["id"].toString();
   String get vehicleNumber => widget.event["vehicle"]["vehicleNumber"] ?? "";
-  String get driverId => widget.event["driver"]["driverId"] ?? "";
+  // String get driverId => widget.event["driver"]["driverId"] ?? "";
+  String get driverId => widget.event["driver"]?["driverId"]?.toString() ?? "";
   String get driverDisplay {
     final first = widget.event["driver"]?["firstName"] as String? ?? "";
     final last = widget.event["driver"]?["lastName"] as String? ?? "";
@@ -56,10 +57,18 @@ class _EscalationFormScreenState extends State<EscalationFormScreen> {
       widget.event["details"]?["weatherPrediction"] as String? ?? "";
   String get location =>
       widget.event["details"]?["location"]?["city"] as String? ?? "";
+  // String get formattedTime {
+  //   final raw = widget.event["timestamp"] as String?;
+  //   final ts = raw != null ? DateTime.tryParse(raw)?.toLocal() : null;
+  //   return ts != null ? DateFormat('dd MMM yyyy, hh:mm a').format(ts) : "-";
+  // }
+
   String get formattedTime {
-    final raw = widget.event["timestamp"] as String?;
-    final ts = raw != null ? DateTime.tryParse(raw)?.toLocal() : null;
-    return ts != null ? DateFormat('dd MMM yyyy, hh:mm a').format(ts) : "-";
+    final ts = widget.event["timestamp"] as num?;
+    if (ts == null) return "-";
+
+    final dt = DateTime.fromMillisecondsSinceEpoch(ts.toInt()).toLocal();
+    return DateFormat('dd MMM yyyy, hh:mm a').format(dt);
   }
 
   Color get severityColor {

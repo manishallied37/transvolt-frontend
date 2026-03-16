@@ -1,10 +1,11 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../../auth/services/auth_service.dart';
 
 class EscalationApi {
-  final Dio dio = Dio(BaseOptions(baseUrl: "${dotenv.env['API_URL']}/api"));
-  String get baseUrl => dio.options.baseUrl;
+  String baseUrl = dotenv.env['API_URL']!;
+  static Dio dio = AuthService.dio;
 
   /// CREATE ESCALATION (form + evidence)
   Future createEscalation(
@@ -21,7 +22,7 @@ class EscalationApi {
     }
 
     final response = await dio.post(
-      "/escalations",
+      "/api/escalations",
       data: formData,
       onSendProgress: onSendProgress, // <-- add this
     );
@@ -31,14 +32,14 @@ class EscalationApi {
 
   /// GET ALL ESCALATIONS
   Future getEscalations() async {
-    final response = await dio.get("/escalations");
+    final response = await dio.get("/api/escalations");
 
     return response.data;
   }
 
   /// GET SINGLE ESCALATION
   Future getEscalationById(String id) async {
-    final response = await dio.get("/escalations/$id");
+    final response = await dio.get("/api/escalations/$id");
 
     return response.data;
   }
@@ -49,7 +50,7 @@ class EscalationApi {
     String status,
   ) async {
     final response = await dio.patch(
-      '/escalations/$id/status',
+      '/api/escalations/$id/status',
       data: {'status': status},
     );
 
@@ -66,7 +67,7 @@ class EscalationApi {
     String? statusChangedTo,
   }) async {
     final response = await dio.post(
-      '/escalations/$escalationId/comments',
+      '/api/escalations/$escalationId/comments',
       data: {
         'comment': comment,
         'comment_type': commentType,
