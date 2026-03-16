@@ -2,8 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '/features/media/screens/media_details_screen.dart';
-import 'escalation_form_screen.dart';
-
+import '/features/escalation/screens/escalation_form_screen.dart';
 import 'package:flutter_map/flutter_map.dart' as fm;
 import 'package:latlong2/latlong.dart' as ll;
 
@@ -32,6 +31,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   @override
   void initState() {
     super.initState();
+    debugPrint("EVENT DATA: ${widget.item}");
     _hydrateGps();
   }
 
@@ -166,7 +166,8 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                                     textScaler: const TextScaler.linear(1.0),
                                   ),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       _kvRow('Event ID', id?.toString() ?? '—'),
                                       const SizedBox(height: 8),
@@ -176,7 +177,9 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                                       const SizedBox(height: 8),
                                       _kvRow(
                                         'Driver',
-                                        (driverName.isEmpty ? '—' : '$driverName '),
+                                        (driverName.isEmpty
+                                            ? '—'
+                                            : '$driverName '),
                                       ),
                                     ],
                                   ),
@@ -196,7 +199,9 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                                         backgroundColor: Colors.transparent,
                                         child: InteractiveViewer(
                                           child: ClipRRect(
-                                            borderRadius: BorderRadius.circular(12),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
                                             child: Image.network(
                                               'https://i.pravatar.cc/150',
                                               fit: BoxFit.contain,
@@ -225,7 +230,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                                     ),
                                   ),
                                 ),
-                              )
+                              ),
                             ],
                           ),
                         ],
@@ -596,8 +601,7 @@ class _RightPanel extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) =>
-                      EscalationFormScreen(escalationDetailsArray: item!),
+                  builder: (context) => EscalationFormScreen(event: item!),
                 ),
               );
             },

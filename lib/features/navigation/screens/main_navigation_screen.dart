@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import '../../dashboard/screens/dashboard_screen.dart';
 import '../../events/screens/events_screen.dart';
 import '../../stream/screens/stream_screen.dart';
-import '../../escalation/screens/escalation_screen.dart';
 import '../../reports/screens/reports_screen.dart';
 
 import '../../auth/screens/login_screen.dart';
 import '../../auth/services/token_storage.dart';
+import '../../escalation/screens/escalation_worklist_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -29,7 +29,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     DashboardScreen(onNavigate: changeTab),
     const EventsScreen(),
     const StreamScreen(),
-    const EscalationScreen(),
+    const EscalationWorklistScreen(),
     const ReportsScreen(),
   ];
 

@@ -7,6 +7,8 @@ import 'features/auth/screens/register_screen.dart';
 import 'features/auth/screens/forget_password_screen.dart';
 import 'features/auth/services/auth_service.dart';
 import 'features/navigation/screens/main_navigation_screen.dart';
+import 'features/escalation/screens/escalation_worklist_screen.dart';
+import 'features/escalation/screens/escalation_review_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,6 +36,19 @@ class MyApp extends StatelessWidget {
         // "/dashboard": (context) => const DashboardScreen(),
         "/forgot-password": (context) => const ForgotPasswordScreen(),
         "/home": (context) => const MainNavigationScreen(),
+        "/escalation-worklist": (context) => const EscalationWorklistScreen(),
+        "/escalation-review": (context) {
+          final escalationId =
+              ModalRoute.of(context)!.settings.arguments as String?;
+
+          if (escalationId == null) {
+            return const Scaffold(
+              body: Center(child: Text("Invalid escalation ID")),
+            );
+          }
+
+          return EscalationReviewScreen(escalationId: escalationId);
+        },
       },
 
       home: const SplashScreen(),
