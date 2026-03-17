@@ -1,59 +1,69 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+import '../../../../core/constants/app_constants.dart';
 import '../../auth/services/auth_service.dart';
 
 class EscalationApi {
-  String baseUrl = dotenv.env['API_URL']!;
   static Dio dio = AuthService.dio;
+  String get baseUrl => dio.options.baseUrl;
 
-  /// CREATE ESCALATION (form + evidence)
   Future createEscalation(
     Map<String, dynamic> data,
     List<File> files, {
     void Function(int sent, int total)? onSendProgress,
   }) async {
-    FormData formData = FormData.fromMap(data);
+    final formData = FormData.fromMap(data);
 
-    for (var file in files) {
+    for (final file in files) {
       formData.files.add(
-        MapEntry("files", await MultipartFile.fromFile(file.path)),
+        MapEntry('files', await MultipartFile.fromFile(file.path)),
       );
     }
 
     final response = await dio.post(
-      "/api/escalations",
+      AppConstants.apiEscalations,
       data: formData,
-      onSendProgress: onSendProgress, // <-- add this
+      onSendProgress: onSendProgress,
     );
-
     return response.data;
   }
 
-  /// GET ALL ESCALATIONS
-  Future getEscalations() async {
-    final response = await dio.get("/api/escalations");
+  Future getEscalations({
+    int page = 1,
+    int limit = 20,
+    String? status,
+    String? dateRange,
+  }) async {
+    final Map<String, dynamic> queryParams = {
+      'page': page,
+      'limit': limit,
+      if (status != null) 'status': status,
+      if (dateRange == 'Today') 'dateRange': 'today',
+      if (dateRange == 'Last 7 days') 'dateRange': '7d',
+      if (dateRange == 'Last 30 days') 'dateRange': '30d',
+    };
 
+    final response = await dio.get(
+      AppConstants.apiEscalations,
+      queryParameters: queryParams,
+    );
     return response.data;
   }
 
-  /// GET SINGLE ESCALATION
   Future getEscalationById(String id) async {
-    final response = await dio.get("/api/escalations/$id");
-
+    final response = await dio.get('${AppConstants.apiEscalations}/$id');
     return response.data;
   }
 
-  /// UPDATE STATUS
   Future<Map<String, dynamic>> updateEscalationStatus(
     String id,
     String status,
   ) async {
     final response = await dio.patch(
-      '/api/escalations/$id/status',
+      '${AppConstants.apiEscalations}/$id/status',
       data: {'status': status},
     );
-
     if (response.data['success'] != true) {
       throw Exception(response.data['message'] ?? 'Failed to update status');
     }
@@ -67,7 +77,7 @@ class EscalationApi {
     String? statusChangedTo,
   }) async {
     final response = await dio.post(
-      '/api/escalations/$escalationId/comments',
+      '${AppConstants.apiEscalations}/$escalationId/comments',
       data: {
         'comment': comment,
         'comment_type': commentType,

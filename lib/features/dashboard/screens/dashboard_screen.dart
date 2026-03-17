@@ -13,25 +13,29 @@ import '../widgets/depot_overview_card.dart';
 
 import '../controllers/alert_controller.dart';
 import '../models/alert_model.dart';
-import '../../auth/services/auth_state.dart';
+import '../../../core/config/rbac.dart';
+import '../../../core/providers/auth_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class DashboardScreen extends StatefulWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   final Function(int) onNavigate;
 
   const DashboardScreen({super.key, required this.onNavigate});
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   bool editMode = false;
 
   final ScrollController scrollController = ScrollController();
 
   final AlertController alertController = AlertController();
 
-  final PollingService pollingService = PollingService();
+  final PollingService pollingService = PollingService(
+    baseInterval: const Duration(seconds: 5),
+  );
 
   DashboardKpiModel? dashboardData;
 
@@ -110,11 +114,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   /// Poll alerts automatically
   void startAlertPolling() {
-    pollingService.start(
-      interval: const Duration(seconds: 5),
-
-      task: fetchAlerts,
-    );
+    pollingService.start(task: fetchAlerts);
   }
 
   /// Fetch alerts
@@ -399,21 +399,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                 const SizedBox(height: 20),
 
-                FutureBuilder(
-                  future: AuthState.getUsername(),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) {
-                      return const Text(
-                        "Welcome",
+                Consumer(
+                  builder: (context, ref, _) {
+                    final userAsync = ref.watch(currentUserProvider);
+                    return userAsync.when(
+                      loading: () => const Text(
+                        'Welcome',
                         style: TextStyle(fontSize: 16, color: Colors.grey),
-                      );
-                    }
-
-                    final username = snapshot.data ?? "User";
-
-                    return Text(
-                      "Welcome, ${username[0].toUpperCase()}${username.substring(1)}",
-                      style: const TextStyle(fontSize: 16, color: Colors.grey),
+                      ),
+                      error: (_, _) => const SizedBox.shrink(),
+                      data: (user) => Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Welcome, ${user.username != null && user.username!.isNotEmpty ? user.username![0].toUpperCase() + user.username!.substring(1) : 'User'}',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _roleBadgeColor(user.role)['bg'],
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              user.displayRole,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: _roleBadgeColor(user.role)['text'],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     );
                   },
                 ),
@@ -434,5 +459,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       ),
     );
+  }
+
+  Map<String, Color> _roleBadgeColor(String? role) {
+    switch (role) {
+      case AppRole.superAdmin:
+        return {'bg': const Color(0xFFEEEDFE), 'text': const Color(0xFF534AB7)};
+      case AppRole.authority:
+        return {'bg': const Color(0xFFFAEEDA), 'text': const Color(0xFF854F0B)};
+      case AppRole.commandCenter:
+        return {'bg': const Color(0xFFE6F1FB), 'text': const Color(0xFF185FA5)};
+      case AppRole.organisation:
+        return {'bg': const Color(0xFFEAF3DE), 'text': const Color(0xFF3B6D11)};
+      default:
+        return {'bg': const Color(0xFFF1EFE8), 'text': const Color(0xFF5F5E5A)};
+    }
   }
 }

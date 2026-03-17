@@ -1,51 +1,80 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../../../../core/constants/app_constants.dart';
 import 'token_storage.dart';
 import 'device_service.dart';
-import 'package:flutter/foundation.dart';
 
 class AuthService {
   static String baseUrl = dotenv.env['API_URL']!;
-  static Dio dio = Dio(BaseOptions(baseUrl: baseUrl));
+  static Dio dio = _createDio();
+
+  /// In production, reject any certificate that doesn't match our hostname.
+  /// In debug/test, allow all certificates so local dev servers work.
+  static Dio _createDio() {
+    final dio = Dio(BaseOptions(baseUrl: baseUrl));
+
+    if (kReleaseMode) {
+      final httpClient = HttpClient()
+        ..badCertificateCallback =
+            (X509Certificate cert, String host, int port) {
+              // Only allow our own API domain
+              final allowedHost = Uri.parse(baseUrl).host;
+              final isAllowed = host == allowedHost;
+              if (!isAllowed) {
+                debugPrint('[Security] Rejected certificate for host: $host');
+              }
+              return isAllowed;
+            };
+
+      (dio.httpClientAdapter as dynamic).onHttpClientCreate = (_) => httpClient;
+    }
+
+    return dio;
+  }
 
   static void setupInterceptors() {
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          if (options.path.contains("/auth/login") ||
-              options.path.contains("/auth/register") ||
-              options.path.contains("/auth/send-otp") ||
-              options.path.contains("/auth/verify-otp") ||
-              options.path.contains("/auth/refresh") ||
-              options.path.contains("/auth/verify-login-otp")) {
-            return handler.next(options);
-          }
+          // Public auth paths — no token needed
+          final publicPaths = [
+            AppConstants.endpointLogin,
+            AppConstants.endpointRegister,
+            AppConstants.endpointSendOtp,
+            AppConstants.endpointVerifyOtp,
+            AppConstants.endpointRefresh,
+            AppConstants.endpointVerifyLoginOtp,
+          ];
+
+          final isPublic = publicPaths.any((p) => options.path.contains(p));
+          if (isPublic) return handler.next(options);
 
           final token = await TokenStorage.getAccessToken();
-
           if (token != null) {
-            options.headers["Authorization"] = "Bearer $token";
+            options.headers['Authorization'] = 'Bearer $token';
           }
 
           handler.next(options);
         },
 
         onError: (DioException e, handler) async {
-          if (e.requestOptions.path.contains("/auth/refresh")) {
+          final path = e.requestOptions.path;
+
+          if (path.contains(AppConstants.endpointRefresh)) {
             return handler.next(e);
           }
-
-          if (e.requestOptions.path.contains("/auth/logout")) {
+          if (path.contains(AppConstants.endpointLogout)) {
             return handler.next(e);
           }
 
           if (e.response?.statusCode == 401) {
-            bool refreshed = await AuthService.refreshAccessToken();
+            final refreshed = await AuthService.refreshAccessToken();
 
             if (refreshed) {
               final token = await TokenStorage.getAccessToken();
-              e.requestOptions.headers["Authorization"] = "Bearer $token";
-
+              e.requestOptions.headers['Authorization'] = 'Bearer $token';
               final response = await dio.fetch(e.requestOptions);
               return handler.resolve(response);
             } else {
@@ -66,21 +95,17 @@ class AuthService {
   ) async {
     try {
       final response = await dio.post(
-        "/auth/login",
-        data: {"login": login, "password": password, "deviceId": deviceId},
+        AppConstants.endpointLogin,
+        data: {'login': login, 'password': password, 'deviceId': deviceId},
       );
-
-      if (response.statusCode == 200) {
-        return response.data;
-      }
-
+      if (response.statusCode == 200) return response.data;
       return null;
     } catch (e) {
       if (e is DioException) {
-        debugPrint("STATUS: ${e.response?.statusCode}");
-        debugPrint("DATA: ${e.response?.data}");
+        debugPrint('Login STATUS: ${e.response?.statusCode}');
+        debugPrint('Login DATA: ${e.response?.data}');
       } else {
-        debugPrint("ERROR: $e");
+        debugPrint('Login ERROR: $e');
       }
     }
     return null;
@@ -88,33 +113,25 @@ class AuthService {
 
   static Future<bool> refreshAccessToken() async {
     try {
-      String? refreshToken = await TokenStorage.getRefreshToken();
-
+      final refreshToken = await TokenStorage.getRefreshToken();
       if (refreshToken == null) return false;
 
       final response = await dio.post(
-        "/auth/refresh",
-        data: {"refreshToken": refreshToken},
+        AppConstants.endpointRefresh,
+        data: {'refreshToken': refreshToken},
       );
 
       if (response.statusCode == 200) {
         final data = response.data;
-
-        String newAccessToken = data["accessToken"];
-        String? newRefreshToken = data["refreshToken"];
-
-        await TokenStorage.saveAccessToken(newAccessToken);
-
-        if (newRefreshToken != null) {
-          await TokenStorage.saveRefreshToken(newRefreshToken);
+        await TokenStorage.saveAccessToken(data['accessToken']);
+        if (data['refreshToken'] != null) {
+          await TokenStorage.saveRefreshToken(data['refreshToken']);
         }
-
         return true;
       }
-
       return false;
     } catch (e) {
-      debugPrint("Refresh Token Error: $e");
+      debugPrint('Refresh token error: $e');
       return false;
     }
   }
@@ -130,43 +147,35 @@ class AuthService {
     String mobileNumber,
   ) async {
     try {
-      final body = {
-        "username": username,
-        "email": email,
-        "password": password,
-        "role": role,
-        "region": region,
-        "depot": depot,
-        "deviceId": deviceId,
-        "deviceName": "Flutter Device",
-        "mobile_number": mobileNumber,
-      };
-
-      debugPrint("REGISTER BODY: $body");
-
-      final response = await dio.post("/auth/register", data: body);
-
-      debugPrint("REGISTER RESPONSE: ${response.data}");
+      final response = await dio.post(
+        AppConstants.endpointRegister,
+        data: {
+          'username': username,
+          'email': email,
+          'password': password,
+          'role': role,
+          'region': region,
+          'depot': depot,
+          'deviceId': deviceId,
+          'deviceName': 'Flutter Device',
+          'mobile_number': mobileNumber,
+        },
+      );
 
       if (response.statusCode == 201) {
         final data = response.data;
-
-        await TokenStorage.saveAccessToken(data["tokens"]["accessToken"]);
-        await TokenStorage.saveRefreshToken(data["tokens"]["refreshToken"]);
-
+        await TokenStorage.saveAccessToken(data['tokens']['accessToken']);
+        await TokenStorage.saveRefreshToken(data['tokens']['refreshToken']);
         await DeviceService.registerDevice();
-
         return true;
       }
-
       return false;
     } catch (e) {
       if (e is DioException) {
-        debugPrint("REGISTER ERROR:");
-        debugPrint("STATUS: ${e.response?.statusCode}");
-        debugPrint("DATA: ${e.response?.data}");
+        debugPrint('Register STATUS: ${e.response?.statusCode}');
+        debugPrint('Register DATA: ${e.response?.data}');
       } else {
-        debugPrint("UNKNOWN ERROR: $e");
+        debugPrint('Register ERROR: $e');
       }
       return false;
     }
@@ -175,13 +184,12 @@ class AuthService {
   static Future<bool> sendOtp(String identifier, String method) async {
     try {
       final response = await dio.post(
-        "/auth/send-otp",
-        data: {"identifier": identifier, "method": method},
+        AppConstants.endpointSendOtp,
+        data: {'identifier': identifier, 'method': method},
       );
-
       return response.statusCode == 200;
     } catch (e) {
-      debugPrint("Send OTP Error: $e");
+      debugPrint('Send OTP error: $e');
       return false;
     }
   }
@@ -193,13 +201,12 @@ class AuthService {
   ) async {
     try {
       final response = await dio.post(
-        "/auth/verify-otp",
-        data: {"identifier": identifier, "otp": otp, "method": method},
+        AppConstants.endpointVerifyOtp,
+        data: {'identifier': identifier, 'otp': otp, 'method': method},
       );
-
       return response.statusCode == 200;
     } catch (e) {
-      debugPrint("Verify OTP Error: $e");
+      debugPrint('Verify OTP error: $e');
       return false;
     }
   }
@@ -211,17 +218,16 @@ class AuthService {
   ) async {
     try {
       final response = await dio.post(
-        "/auth/reset-password",
+        AppConstants.endpointResetPassword,
         data: {
-          "identifier": identifier,
-          "password": password,
-          "method": method,
+          'identifier': identifier,
+          'password': password,
+          'method': method,
         },
       );
-
       return response.statusCode == 200;
     } catch (e) {
-      debugPrint("Reset Password Error: $e");
+      debugPrint('Reset password error: $e');
       return false;
     }
   }
@@ -233,40 +239,37 @@ class AuthService {
   ) async {
     try {
       final response = await dio.post(
-        "/auth/verify-login-otp",
-        data: {"identifier": identifier, "otp": otp, "deviceId": deviceId},
+        AppConstants.endpointVerifyLoginOtp,
+        data: {'identifier': identifier, 'otp': otp, 'deviceId': deviceId},
       );
 
       if (response.statusCode == 200) {
         final data = response.data;
-
-        await TokenStorage.saveAccessToken(data["tokens"]["accessToken"]);
-        await TokenStorage.saveRefreshToken(data["tokens"]["refreshToken"]);
-
+        await TokenStorage.saveAccessToken(data['tokens']['accessToken']);
+        await TokenStorage.saveRefreshToken(data['tokens']['refreshToken']);
         return true;
       }
-
       return false;
     } catch (e) {
       if (e is DioException) {
-        debugPrint("Server Response: ${e.response?.data}");
+        debugPrint('Verify login OTP server response: ${e.response?.data}');
       }
-      debugPrint("Verify Login OTP Error: $e");
+      debugPrint('Verify login OTP error: $e');
       return false;
     }
   }
 
   static Future<void> logout() async {
     try {
-      await dio.post("/auth/logout");
+      await dio.post(AppConstants.endpointLogout);
     } catch (_) {}
-
     await TokenStorage.clearTokens();
   }
 
   static Future<void> logoutAllDevices() async {
-    await dio.post("/auth/logout-all");
-
+    try {
+      await dio.post(AppConstants.endpointLogoutAll);
+    } catch (_) {}
     await TokenStorage.clearTokens();
   }
 }

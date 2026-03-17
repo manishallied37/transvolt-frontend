@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../services/auth_state.dart';
+import '../../../core/constants/app_constants.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -28,14 +29,14 @@ class _SplashScreenState extends State<SplashScreen> {
       if (!mounted) return;
 
       if (loggedIn) {
-        Navigator.of(context).pushReplacementNamed("/home");
+        Navigator.of(context).pushReplacementNamed(AppConstants.routeHome);
       } else {
-        Navigator.of(context).pushReplacementNamed("/login");
+        Navigator.of(context).pushReplacementNamed(AppConstants.routeLogin);
       }
     } catch (e) {
       if (!mounted) return;
 
-      Navigator.of(context).pushReplacementNamed("/login");
+      Navigator.of(context).pushReplacementNamed(AppConstants.routeLogin);
     }
   }
 
@@ -52,13 +53,7 @@ class _SplashView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFFE8EAEC), Color(0xFFE8EAEC)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+        color: Theme.of(context).scaffoldBackgroundColor,
         child: SafeArea(
           child: Center(
             child: Column(
@@ -72,20 +67,25 @@ class _SplashView extends StatelessWidget {
                   "NetraDyne FMS",
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
 
                 const SizedBox(height: 10),
 
-                const Text(
+                Text(
                   "Fleet Management System",
-                  style: TextStyle(color: Colors.black54, fontSize: 14),
+                  style: TextStyle(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.6),
+                    fontSize: 14,
+                  ),
                 ),
 
                 const SizedBox(height: 40),
 
-                const CircularProgressIndicator(color: Colors.blue),
+                const CircularProgressIndicator(),
               ],
             ),
           ),

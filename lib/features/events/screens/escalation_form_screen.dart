@@ -1,28 +1,29 @@
-import 'package:flutter/material.dart';
+// import 'package:flutter/material.dart';
 
-class EscalationFormScreen extends StatelessWidget {
-  final Map<String, dynamic> escalationDetailsArray;
+// class EscalationFormScreen extends StatelessWidget {
+//   final Map<String, dynamic> escalationDetailsArray;
 
-  const EscalationFormScreen({super.key, required this.escalationDetailsArray});
+//   const EscalationFormScreen({super.key, required this.escalationDetailsArray});
 
-  @override
-  Widget build(BuildContext context) {
-    final driver = escalationDetailsArray['driver'] ?? {};
-    final details = escalationDetailsArray['details'] ?? {};
+//   @override
+//   Widget build(BuildContext context) {
+//     final driver = escalationDetailsArray['driver'] ?? {};
+//     final details = escalationDetailsArray['details'] ?? {};
 
-    return Scaffold(
-      appBar: AppBar(title: const Text("Escalation Form")),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("Driver: ${driver['firstName']} ${driver['lastName']}"),
-            Text("Driver ID: ${driver['driverId']}"),
-            Text("Event Type: ${details['typeDescription']}"),
-          ],
-        ),
-      ),
-    );
-  }
-}
+//     return Scaffold(
+//       appBar: AppBar(title: const Text("Escalation Form")),
+//       body: Padding(
+//         padding: const EdgeInsets.all(16),
+//         child: Column(
+//           crossAxisAlignment: CrossAxisAlignment.start,
+//           children: [
+//             Text("Driver: ${driver['firstName']} ${driver['lastName']}"),
+//             Text("Driver ID: ${driver['driverId']}"),
+//             Text("Event Type: ${details['typeDescription']}"),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+// }
+export '../../escalation/screens/escalation_form_screen.dart';

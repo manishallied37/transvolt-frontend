@@ -1,20 +1,23 @@
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 import '../services/escalation_api.dart';
 import 'package:intl/intl.dart';
 import 'dart:typed_data';
+import '../../../../core/providers/auth_provider.dart';
 
-class EscalationFormScreen extends StatefulWidget {
+class EscalationFormScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> event;
   const EscalationFormScreen({super.key, required this.event});
 
   @override
-  State<EscalationFormScreen> createState() => _EscalationFormScreenState();
+  ConsumerState<EscalationFormScreen> createState() =>
+      _EscalationFormScreenState();
 }
 
-class _EscalationFormScreenState extends State<EscalationFormScreen> {
+class _EscalationFormScreenState extends ConsumerState<EscalationFormScreen> {
   final EscalationApi api = EscalationApi();
   final TextEditingController commentController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
@@ -240,6 +243,19 @@ class _EscalationFormScreenState extends State<EscalationFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = ref.watch(currentUserProvider).asData?.value;
+    // Defence-in-depth: ensure only permitted roles can reach this screen
+    if (user != null && !user.canCreateEscalations) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Create Escalation')),
+        body: const Center(
+          child: Text(
+            'You do not have permission to create escalations.',
+            style: TextStyle(color: Colors.black45),
+          ),
+        ),
+      );
+    }
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(

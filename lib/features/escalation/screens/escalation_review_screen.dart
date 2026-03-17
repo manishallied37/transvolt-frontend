@@ -1,20 +1,26 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
 import '../services/escalation_api.dart';
+import '../../../../core/config/rbac.dart';
+import '../../../../core/providers/auth_provider.dart';
+import '../../../../core/providers/escalation_provider.dart';
 
-class EscalationReviewScreen extends StatefulWidget {
+class EscalationReviewScreen extends ConsumerStatefulWidget {
   final String escalationId;
   const EscalationReviewScreen({super.key, required this.escalationId});
 
   @override
-  State<EscalationReviewScreen> createState() => _EscalationReviewScreenState();
+  ConsumerState<EscalationReviewScreen> createState() =>
+      _EscalationReviewScreenState();
 }
 
-class _EscalationReviewScreenState extends State<EscalationReviewScreen> {
+class _EscalationReviewScreenState
+    extends ConsumerState<EscalationReviewScreen> {
   final EscalationApi api = EscalationApi();
   final TextEditingController _commentController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
@@ -72,7 +78,7 @@ class _EscalationReviewScreenState extends State<EscalationReviewScreen> {
     try {
       final response = await api.getEscalationById(widget.escalationId);
       setState(() {
-        escalation = response["escalation"]; // could be null if id not found
+        escalation = response["escalation"];
         evidence = response["evidence"] ?? [];
         comments = response["comments"] ?? [];
         loading = false;
@@ -312,6 +318,7 @@ class _EscalationReviewScreenState extends State<EscalationReviewScreen> {
                               commentType: "STATUS_CHANGE",
                               statusChangedTo: selectedStatus,
                             );
+                            ref.invalidate(currentEscalationsProvider);
                             await loadEscalation();
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -378,31 +385,7 @@ class _EscalationReviewScreenState extends State<EscalationReviewScreen> {
             color: Colors.black87,
           ),
         ),
-        actions: [
-          if (!loading)
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: TextButton.icon(
-                onPressed: submittingStatus ? null : _showStatusSheet,
-                icon: const Icon(Icons.swap_horiz_rounded, size: 18),
-                label: const Text(
-                  "Update status",
-                  style: TextStyle(fontSize: 13),
-                ),
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF534AB7),
-                  backgroundColor: const Color(0xFFEEEDFE),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-            ),
-        ],
+        actions: [if (!loading) _buildUpdateStatusAction()],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(0.5),
           child: Container(height: 0.5, color: Colors.black12),
@@ -431,6 +414,28 @@ class _EscalationReviewScreenState extends State<EscalationReviewScreen> {
                 _buildCommentInput(),
               ],
             ),
+    );
+  }
+
+  /// Update Status button — only shown to roles with escalation:update_status permission
+  Widget _buildUpdateStatusAction() {
+    final user = ref.watch(currentUserProvider).asData?.value;
+    if (user == null || !user.canUpdateEscalationStatus) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.only(right: 12),
+      child: TextButton.icon(
+        onPressed: submittingStatus ? null : _showStatusSheet,
+        icon: const Icon(Icons.swap_horiz_rounded, size: 18),
+        label: const Text('Update status', style: TextStyle(fontSize: 13)),
+        style: TextButton.styleFrom(
+          foregroundColor: const Color(0xFF534AB7),
+          backgroundColor: const Color(0xFFEEEDFE),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      ),
     );
   }
 
@@ -1168,13 +1173,15 @@ class _EscalationReviewScreenState extends State<EscalationReviewScreen> {
   }
 
   Map<String, Color> _roleColor(String role) {
-    switch (role.toUpperCase()) {
-      case 'CC':
+    switch (role) {
+      case AppRole.commandCenter:
         return {'bg': const Color(0xFFE6F1FB), 'text': const Color(0xFF185FA5)};
-      case 'AUTHORITY':
+      case AppRole.authority:
         return {'bg': const Color(0xFFFAEEDA), 'text': const Color(0xFF854F0B)};
-      case 'ADMIN':
+      case AppRole.superAdmin:
         return {'bg': const Color(0xFFEEEDFE), 'text': const Color(0xFF534AB7)};
+      case AppRole.organisation:
+        return {'bg': const Color(0xFFEAF3DE), 'text': const Color(0xFF3B6D11)};
       default:
         return {'bg': const Color(0xFFF1EFE8), 'text': const Color(0xFF5F5E5A)};
     }

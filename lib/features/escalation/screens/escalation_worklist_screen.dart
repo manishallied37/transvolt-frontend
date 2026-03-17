@@ -1,34 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+
+import '../../../../core/constants/app_constants.dart';
+import '../../../../core/providers/auth_provider.dart';
+import '../../../../core/providers/escalation_provider.dart';
+import '../../../../shared/widgets/async_value_widget.dart';
+import '../../../../shared/widgets/offline_banner.dart';
 import '../services/escalation_api.dart';
 
-class EscalationWorklistScreen extends StatefulWidget {
+class EscalationWorklistScreen extends ConsumerStatefulWidget {
   const EscalationWorklistScreen({super.key});
 
   @override
-  State<EscalationWorklistScreen> createState() =>
+  ConsumerState<EscalationWorklistScreen> createState() =>
       _EscalationWorklistScreenState();
 }
 
-class _EscalationWorklistScreenState extends State<EscalationWorklistScreen> {
-  final EscalationApi api = EscalationApi();
-
-  List _all = [];
-  List _filtered = [];
-  bool loading = true;
-
+class _EscalationWorklistScreenState
+    extends ConsumerState<EscalationWorklistScreen> {
   final TextEditingController _searchController = TextEditingController();
-  String? _selectedStatus;
-  String? _selectedType;
-  String? _selectedDateRange;
 
-  final List<String> _statuses = [
-    'ESCALATED_TO_CC',
-    'UNDER_REVIEW',
-    'ESCALATED_TO_AUTHORITY',
-    'CLOSED',
-    'REJECTED',
-  ];
   final List<String> _types = [
     'Fatigue / drowsiness risk',
     'Unsafe driving behavior',
@@ -42,101 +34,25 @@ class _EscalationWorklistScreenState extends State<EscalationWorklistScreen> {
   final List<String> _dateRanges = ['Today', 'Last 7 days', 'Last 30 days'];
 
   @override
-  void initState() {
-    super.initState();
-    loadEscalations();
-    _searchController.addListener(_applyFilters);
-  }
-
-  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
 
-  Future<void> loadEscalations() async {
-    try {
-      final response = await api.getEscalations();
-      setState(() {
-        _all = response["escalations"] ?? [];
-        _filtered = List.from(_all);
-        loading = false;
-      });
-    } catch (e) {
-      setState(() => loading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to load escalations: $e")),
-        );
-      }
-    }
-  }
-
-  void _applyFilters() {
-    final q = _searchController.text.toLowerCase();
-    final now = DateTime.now();
-
-    setState(() {
-      _filtered = _all.where((e) {
-        // Search
-        final matchQ =
-            q.isEmpty ||
-            (e['driver_name'] ?? '').toLowerCase().contains(q) ||
-            (e['vehicle_id'] ?? '').toLowerCase().contains(q) ||
-            (e['escalation_type'] ?? '').toLowerCase().contains(q) ||
-            (e['event_sub_type'] ?? '').toLowerCase().contains(q) ||
-            (e['city'] ?? '').toLowerCase().contains(q);
-
-        // Status
-        final matchStatus =
-            _selectedStatus == null || e['status'] == _selectedStatus;
-
-        // Type
-        final matchType =
-            _selectedType == null || e['escalation_type'] == _selectedType;
-
-        // Date
-        bool matchDate = true;
-        if (_selectedDateRange != null) {
-          final raw = e['created_at'] as String?;
-          final date = raw != null ? DateTime.tryParse(raw)?.toLocal() : null;
-          if (date != null) {
-            final diff = now.difference(date).inDays;
-            if (_selectedDateRange == 'Today') {
-              matchDate = diff == 0;
-            } else if (_selectedDateRange == 'Last 7 days') {
-              matchDate = diff <= 7;
-            } else if (_selectedDateRange == 'Last 30 days') {
-              matchDate = diff <= 30;
-            }
-          }
-        }
-
-        return matchQ && matchStatus && matchType && matchDate;
-      }).toList();
-    });
-  }
-
-  void _clearFilters() {
-    _searchController.clear();
-    setState(() {
-      _selectedStatus = null;
-      _selectedType = null;
-      _selectedDateRange = null;
-    });
-    _applyFilters();
-  }
+  // ── Helpers ────────────────────────────────────────────────
 
   Color _statusColor(String? status) {
     switch (status) {
       case 'ESCALATED_TO_CC':
         return const Color(0xFF534AB7);
-      case 'RESOLVED':
-        return const Color(0xFF3B6D11);
-      case 'PENDING':
+      case 'UNDER_REVIEW':
         return const Color(0xFF854F0B);
+      case 'ESCALATED_TO_AUTHORITY':
+        return const Color(0xFF185FA5);
       case 'CLOSED':
         return const Color(0xFF5F5E5A);
+      case 'REJECTED':
+        return const Color(0xFFA32D2D);
       default:
         return Colors.grey;
     }
@@ -146,12 +62,14 @@ class _EscalationWorklistScreenState extends State<EscalationWorklistScreen> {
     switch (status) {
       case 'ESCALATED_TO_CC':
         return const Color(0xFFEEEDFE);
-      case 'RESOLVED':
-        return const Color(0xFFEAF3DE);
-      case 'PENDING':
+      case 'UNDER_REVIEW':
         return const Color(0xFFFAEEDA);
+      case 'ESCALATED_TO_AUTHORITY':
+        return const Color(0xFFE6F1FB);
       case 'CLOSED':
         return const Color(0xFFF1EFE8);
+      case 'REJECTED':
+        return const Color(0xFFFCEBEB);
       default:
         return Colors.grey.shade100;
     }
@@ -164,7 +82,7 @@ class _EscalationWorklistScreenState extends State<EscalationWorklistScreen> {
       case 'UNDER_REVIEW':
         return 'Under review';
       case 'ESCALATED_TO_AUTHORITY':
-        return 'Escalated to Authority';
+        return 'Escalated to authority';
       case 'CLOSED':
         return 'Closed';
       case 'REJECTED':
@@ -192,13 +110,12 @@ class _EscalationWorklistScreenState extends State<EscalationWorklistScreen> {
     return dt != null ? DateFormat('dd MMM yyyy, hh:mm a').format(dt) : '-';
   }
 
+  // ── Build ──────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
-    final hasActiveFilters =
-        _selectedStatus != null ||
-        _selectedType != null ||
-        _selectedDateRange != null ||
-        _searchController.text.isNotEmpty;
+    final filter = ref.watch(escalationFilterProvider);
+    final asyncEscalations = ref.watch(currentEscalationsProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
@@ -206,7 +123,7 @@ class _EscalationWorklistScreenState extends State<EscalationWorklistScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         title: const Text(
-          "Escalation worklist",
+          'Escalation worklist',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w500,
@@ -218,154 +135,212 @@ class _EscalationWorklistScreenState extends State<EscalationWorklistScreen> {
           child: Container(height: 0.5, color: Colors.black12),
         ),
       ),
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                // Toolbar
-                Container(
-                  color: Colors.white,
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                  child: Column(
-                    children: [
-                      // Search bar
-                      TextField(
-                        controller: _searchController,
-                        decoration: InputDecoration(
-                          hintText: 'Search by driver, vehicle, type...',
-                          prefixIcon: const Icon(Icons.search, size: 20),
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 10,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(color: Colors.black12),
-                          ),
-                          filled: true,
-                          fillColor: const Color(0xFFF5F5F5),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      // Filter chips row
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            _buildFilterChip(
-                              label: _selectedStatus != null
-                                  ? _statusLabel(_selectedStatus)
-                                  : 'Status',
-                              isActive: _selectedStatus != null,
-                              onTap: () => _showBottomSheet(
-                                context,
-                                'Filter by status',
-                                _statuses.map(_statusLabel).toList(),
-                                (v) => setState(() {
-                                  _selectedStatus =
-                                      _statuses[_statuses
-                                          .map(_statusLabel)
-                                          .toList()
-                                          .indexOf(v)];
-                                  _applyFilters();
-                                }),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            _buildFilterChip(
-                              label: _selectedType ?? 'Escalation type',
-                              isActive: _selectedType != null,
-                              onTap: () => _showBottomSheet(
-                                context,
-                                'Filter by type',
-                                _types,
-                                (v) => setState(() {
-                                  _selectedType = v;
-                                  _applyFilters();
-                                }),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            _buildFilterChip(
-                              label: _selectedDateRange ?? 'Date range',
-                              isActive: _selectedDateRange != null,
-                              onTap: () => _showBottomSheet(
-                                context,
-                                'Filter by date',
-                                _dateRanges,
-                                (v) => setState(() {
-                                  _selectedDateRange = v;
-                                  _applyFilters();
-                                }),
-                              ),
-                            ),
-                            if (hasActiveFilters) ...[
-                              const SizedBox(width: 8),
-                              GestureDetector(
-                                onTap: _clearFilters,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 7,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFFCEBEB),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: const Text(
-                                    "Clear",
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Color(0xFFA32D2D),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+      body: Column(
+        children: [
+          const OfflineBanner(),
+          _buildToolbar(filter),
+          _buildCountBar(asyncEscalations, filter),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () async {
+                ref.invalidate(currentEscalationsProvider);
+              },
+              child: AsyncValueWidget<Map<String, dynamic>>(
+                value: asyncEscalations,
+                onRetry: () => ref.invalidate(currentEscalationsProvider),
+                data: (response) {
+                  final items = (response['escalations'] as List?) ?? [];
+                  final totalPages = response['totalPages'] as int? ?? 1;
 
-                // Count bar
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      _filtered.length == _all.length
-                          ? '${_all.length} escalations'
-                          : '${_filtered.length} of ${_all.length} escalations',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.black45,
-                      ),
-                    ),
-                  ),
-                ),
+                  if (items.isEmpty) {
+                    return const EmptyState(
+                      title: 'No escalations found',
+                      subtitle: 'Try adjusting your filters or search query',
+                    );
+                  }
 
-                // List or empty state
-                Expanded(
-                  child: _filtered.isEmpty
-                      ? _buildEmptyState()
-                      : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
-                          itemCount: _filtered.length,
-                          itemBuilder: (context, index) =>
-                              _buildCard(_filtered[index]),
-                        ),
-                ),
-              ],
+                  return ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
+                    itemCount: items.length + 1,
+                    itemBuilder: (context, index) {
+                      if (index == items.length) {
+                        return _buildPagination(filter, totalPages);
+                      }
+                      final currentUser = ref
+                          .watch(currentUserProvider)
+                          .asData
+                          ?.value;
+                      return _buildCard(items[index] as Map, currentUser);
+                    },
+                  );
+                },
+              ),
             ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildCard(Map e) {
+  Widget _buildToolbar(EscalationFilter filter) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      child: Column(
+        children: [
+          TextField(
+            controller: _searchController,
+            onChanged: (v) =>
+                ref.read(escalationFilterProvider.notifier).setSearch(v),
+            decoration: InputDecoration(
+              hintText: 'Search by driver, vehicle, type...',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Colors.black12),
+              ),
+              filled: true,
+              fillColor: const Color(0xFFF5F5F5),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildFilterChip(
+                  label: filter.status != null
+                      ? _statusLabel(filter.status)
+                      : 'Status',
+                  isActive: filter.status != null,
+                  onTap: () => _showBottomSheet(
+                    'Filter by status',
+                    AppConstants.allEscalationStatuses
+                        .map(_statusLabel)
+                        .toList(),
+                    (v) {
+                      final idx = AppConstants.allEscalationStatuses
+                          .map(_statusLabel)
+                          .toList()
+                          .indexOf(v);
+                      ref
+                          .read(escalationFilterProvider.notifier)
+                          .setStatus(AppConstants.allEscalationStatuses[idx]);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _buildFilterChip(
+                  label: filter.type ?? 'Escalation type',
+                  isActive: filter.type != null,
+                  onTap: () => _showBottomSheet(
+                    'Filter by type',
+                    _types,
+                    (v) =>
+                        ref.read(escalationFilterProvider.notifier).setType(v),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _buildFilterChip(
+                  label: filter.dateRange ?? 'Date range',
+                  isActive: filter.dateRange != null,
+                  onTap: () => _showBottomSheet(
+                    'Filter by date',
+                    _dateRanges,
+                    (v) => ref
+                        .read(escalationFilterProvider.notifier)
+                        .setDateRange(v),
+                  ),
+                ),
+                if (filter.hasActiveFilters) ...[
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () {
+                      _searchController.clear();
+                      ref.read(escalationFilterProvider.notifier).clear();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFCEBEB),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        'Clear',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFFA32D2D),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCountBar(
+    AsyncValue<Map<String, dynamic>> async,
+    EscalationFilter filter,
+  ) {
+    final total = async.asData?.value['total'] as int?;
+    final label = total != null ? '$total escalations' : '';
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: Colors.black45),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPagination(EscalationFilter filter, int totalPages) {
+    if (totalPages <= 1) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.chevron_left),
+            onPressed: filter.page > 1
+                ? () => ref.read(escalationFilterProvider.notifier).prevPage()
+                : null,
+          ),
+          Text(
+            'Page ${filter.page} of $totalPages',
+            style: const TextStyle(fontSize: 13, color: Colors.black54),
+          ),
+          IconButton(
+            icon: const Icon(Icons.chevron_right),
+            onPressed: filter.page < totalPages
+                ? () => ref.read(escalationFilterProvider.notifier).nextPage()
+                : null,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCard(Map e, CurrentUser? user) {
     final sevLevel = (e['severity_level'] as num?)?.toInt() ?? 1;
-    final speed = double.tryParse(e['max_vehicle_speed'] ?? '') ?? 0;
-    final gForce = double.tryParse(e['max_g_force'] ?? '') ?? 0;
-    final conf = double.tryParse(e['confidence'] ?? '') ?? 0;
+    final speed =
+        double.tryParse(e['max_vehicle_speed']?.toString() ?? '') ?? 0;
+    final gForce = double.tryParse(e['max_g_force']?.toString() ?? '') ?? 0;
+    final conf = double.tryParse(e['confidence']?.toString() ?? '') ?? 0;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -379,7 +354,6 @@ class _EscalationWorklistScreenState extends State<EscalationWorklistScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top row
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -416,12 +390,9 @@ class _EscalationWorklistScreenState extends State<EscalationWorklistScreen> {
                 ),
               ],
             ),
-
             const SizedBox(height: 12),
             const Divider(height: 1, thickness: 0.5, color: Colors.black12),
             const SizedBox(height: 12),
-
-            // Meta grid
             Row(
               children: [
                 _metaItem('Driver', e['driver_name'] ?? '-'),
@@ -437,12 +408,9 @@ class _EscalationWorklistScreenState extends State<EscalationWorklistScreen> {
                 _metaItem('Confidence', '${(conf * 100).toStringAsFixed(0)}%'),
               ],
             ),
-
             const SizedBox(height: 12),
             const Divider(height: 1, thickness: 0.5, color: Colors.black12),
             const SizedBox(height: 10),
-
-            // Footer
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -453,30 +421,17 @@ class _EscalationWorklistScreenState extends State<EscalationWorklistScreen> {
                 TextButton(
                   onPressed: () async {
                     try {
-                      await api.updateEscalationStatus(e['id'], 'UNDER_REVIEW');
-                      // Update locally so UI reflects immediately without refetch
-                      setState(() {
-                        final idx = _all.indexWhere(
-                          (item) => item['id'] == e['id'],
-                        );
-                        if (idx != -1) {
-                          _all[idx] = {..._all[idx], 'status': 'UNDER_REVIEW'};
-                        }
-                        final fidx = _filtered.indexWhere(
-                          (item) => item['id'] == e['id'],
-                        );
-                        if (fidx != -1) {
-                          _filtered[fidx] = {
-                            ..._filtered[fidx],
-                            'status': 'UNDER_REVIEW',
-                          };
-                        }
-                      });
+                      await EscalationApi().updateEscalationStatus(
+                        e['id'],
+                        AppConstants.statusUnderReview,
+                      );
+                      // Invalidate so list refreshes from server
+                      ref.invalidate(currentEscalationsProvider);
                     } catch (err) {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text("Failed to update status: $err"),
+                            content: Text('Failed to update status: $err'),
                           ),
                         );
                         return;
@@ -485,7 +440,7 @@ class _EscalationWorklistScreenState extends State<EscalationWorklistScreen> {
                     if (mounted) {
                       Navigator.pushNamed(
                         context,
-                        '/escalation-review',
+                        AppConstants.routeEscalationReview,
                         arguments: e['id'],
                       );
                     }
@@ -619,45 +574,7 @@ class _EscalationWorklistScreenState extends State<EscalationWorklistScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1EFE8),
-              borderRadius: BorderRadius.circular(26),
-            ),
-            child: const Icon(
-              Icons.inbox_outlined,
-              color: Colors.black38,
-              size: 26,
-            ),
-          ),
-          const SizedBox(height: 14),
-          const Text(
-            "No escalations found",
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-              color: Colors.black54,
-            ),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            "Try adjusting your filters or search query",
-            style: TextStyle(fontSize: 13, color: Colors.black38),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showBottomSheet(
-    BuildContext context,
     String title,
     List<String> options,
     void Function(String) onSelect,

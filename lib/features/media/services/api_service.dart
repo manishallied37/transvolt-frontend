@@ -4,49 +4,19 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import '../models/event_models.dart';
 import '../../auth/services/auth_service.dart';
-import '../../auth/services/token_storage.dart';
 
 class ApiService {
   static String baseUrl = dotenv.env['API_URL']!;
-  static Dio dio = Dio(BaseOptions(baseUrl: baseUrl));
+
+  // Reuse the shared Dio instance with interceptors
+  static Dio dio = AuthService.dio;
 
   static Future<Response> _authorizedGetUri(Uri uri) async {
-    String? token = await TokenStorage.getAccessToken();
-
     debugPrint('[API] GET ${uri.toString()}');
-
-    Response response = await dio.getUri(
-      uri,
-      options: Options(headers: {"Authorization": "Bearer $token"}),
-    );
-
+    final response = await dio.getUri(uri);
     debugPrint(
       '[API] RESPONSE ${response.statusCode} for GET ${uri.toString()}',
     );
-
-    if (response.statusCode == 401) {
-      debugPrint(
-        '[API] 401 received for GET ${uri.toString()}, refreshing token',
-      );
-
-      bool refreshed = await AuthService.refreshAccessToken();
-
-      if (!refreshed) {
-        throw Exception("Session expired. Please login again.");
-      }
-
-      String? newToken = await TokenStorage.getAccessToken();
-
-      response = await dio.getUri(
-        uri,
-        options: Options(headers: {"Authorization": "Bearer $newToken"}),
-      );
-
-      debugPrint(
-        '[API] RETRY RESPONSE ${response.statusCode} for GET ${uri.toString()}',
-      );
-    }
-
     return response;
   }
 
@@ -57,7 +27,7 @@ class ApiService {
 
   /// ===== GET EVENTS =====
   static Future<List<EventItem>> getEvents() async {
-    final response = await _authorizedGet('/events');
+    final response = await _authorizedGet('/v1/events');
 
     if (response.statusCode != 200) {
       throw Exception(
@@ -125,7 +95,7 @@ class ApiService {
 
     final imageUri =
         Uri.parse(
-          '$baseUrl/netradyne/v1/tenants/$tenant/event/preview/images',
+          '$baseUrl/v1/netradyne/v1/tenants/$tenant/event/preview/images',
         ).replace(
           queryParameters: {
             'startTime': '$timestamp',
@@ -146,7 +116,7 @@ class ApiService {
         .join(',');
 
     final videoUri = Uri.parse(
-      '$baseUrl/netradyne/v1/tenants/$tenant/videoplayurl/${videoIds.isEmpty ? "1" : videoIds}',
+      '$baseUrl/v1/netradyne/v1/tenants/$tenant/videoplayurl/${videoIds.isEmpty ? "1" : videoIds}',
     ).replace(queryParameters: {'validityDuration': '3600'});
 
     final imageResponse = await _authorizedGetUri(imageUri);

@@ -1,5 +1,4 @@
 class DashboardKpiModel {
-
   final int totalEvents;
   final double compliance;
   final int escalated;
@@ -25,7 +24,6 @@ class DashboardKpiModel {
   });
 
   factory DashboardKpiModel.fromJson(Map<String, dynamic> json) {
-
     return DashboardKpiModel(
       totalEvents: json["totalEvents"],
       compliance: (json["compliance"] as num).toDouble(),

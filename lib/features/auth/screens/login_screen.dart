@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/device_service.dart';
 import 'otp_verify_screen.dart';
+import '../../../core/constants/app_constants.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -113,10 +114,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 8),
 
-                const Text(
-                  "Login to continue",
+                Text(
+                  'Login to continue',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey),
+                  style: TextStyle(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
                 ),
 
                 const SizedBox(height: 40),
@@ -186,9 +191,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 TextButton(
                   onPressed: () {
-                    Navigator.pushNamed(context, "/forgot-password");
+                    Navigator.pushNamed(
+                      context,
+                      AppConstants.routeForgotPassword,
+                    );
                   },
-                  child: const Text("Forgot Password?"),
+                  child: const Text('Forgot Password?'),
                 ),
 
                 const SizedBox(height: 10),
@@ -199,9 +207,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 OutlinedButton(
                   onPressed: () {
-                    Navigator.pushNamed(context, "/register");
+                    Navigator.pushNamed(context, AppConstants.routeRegister);
                   },
-                  child: const Text("Create Account"),
+                  child: const Text('Create Account'),
                 ),
               ],
             ),

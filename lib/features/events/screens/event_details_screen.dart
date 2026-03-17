@@ -1,21 +1,24 @@
 // import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '/features/media/screens/media_details_screen.dart';
 import '/features/escalation/screens/escalation_form_screen.dart';
 import 'package:flutter_map/flutter_map.dart' as fm;
 import 'package:latlong2/latlong.dart' as ll;
+import '../../../../core/config/rbac.dart';
+import '../../../../shared/widgets/rbac_guard.dart';
 
 /// Pass your event/item payload in [item].
-class EventDetailsScreen extends StatefulWidget {
+class EventDetailsScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic>? item;
   const EventDetailsScreen({super.key, required this.item});
 
   @override
-  State<EventDetailsScreen> createState() => _EventDetailsScreenState();
+  ConsumerState<EventDetailsScreen> createState() => _EventDetailsScreenState();
 }
 
-class _EventDetailsScreenState extends State<EventDetailsScreen> {
+class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
   // Map
   final fm.MapController _mapController = fm.MapController();
   List<ll.LatLng> _path = [];
@@ -592,27 +595,30 @@ class _RightPanel extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: () {
-              if (item == null) return;
+        PermissionGuard(
+          permission: Permission.escalationCreate,
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                if (item == null) return;
 
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => EscalationFormScreen(event: item!),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => EscalationFormScreen(event: item!),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.warning_amber_rounded),
+              label: const Text('Escalate'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade600,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
                 ),
-              );
-            },
-            icon: const Icon(Icons.warning_amber_rounded),
-            label: const Text('Escalate'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
               ),
             ),
           ),
