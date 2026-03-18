@@ -318,6 +318,7 @@ class _EscalationReviewScreenState
                               commentType: "STATUS_CHANGE",
                               statusChangedTo: selectedStatus,
                             );
+                            ref.invalidate(escalationListProvider);
                             ref.invalidate(currentEscalationsProvider);
                             await loadEscalation();
                             if (mounted) {
