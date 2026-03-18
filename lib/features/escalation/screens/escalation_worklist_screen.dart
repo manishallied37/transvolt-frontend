@@ -143,6 +143,7 @@ class _EscalationWorklistScreenState
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async {
+                ref.invalidate(escalationListProvider);
                 ref.invalidate(currentEscalationsProvider);
               },
               child: AsyncValueWidget<Map<String, dynamic>>(
@@ -426,6 +427,7 @@ class _EscalationWorklistScreenState
                         AppConstants.statusUnderReview,
                       );
                       // Invalidate so list refreshes from server
+                      ref.invalidate(escalationListProvider);
                       ref.invalidate(currentEscalationsProvider);
                     } catch (err) {
                       if (mounted) {
