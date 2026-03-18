@@ -93,18 +93,20 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
   // ── Create user sheet ─────────────────────────────────────────────────────
 
   void _showCreateUserSheet(CurrentUser currentUser) {
+    // Form key for validation
+    final formKey = GlobalKey<FormState>();
+
     final usernameC = TextEditingController();
     final emailC = TextEditingController();
     final passwordC = TextEditingController();
     final regionC = TextEditingController();
     final depotC = TextEditingController();
-    final mobileC = TextEditingController();
     String? selectedRole;
     bool loading = false;
     bool hidePassword = true;
     String? fullMobileNumber;
+    bool mobileError = false; // track mobile field error separately
 
-    // Only SuperAdmin can create users — other roles have no creation rights
     final creatableRoles = currentUser.isSuperAdmin
         ? [AppRole.authority, AppRole.commandCenter, AppRole.organisation]
         : <String>[];
@@ -125,201 +127,275 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
             MediaQuery.of(ctx).viewInsets.bottom + 24,
           ),
           child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Create New User',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'New user will receive login credentials via email',
-                  style: TextStyle(fontSize: 13, color: Colors.black45),
-                ),
-                const SizedBox(height: 20),
-
-                _field(usernameC, 'Username', Icons.person_outline),
-                const SizedBox(height: 12),
-                _field(
-                  emailC,
-                  'Email',
-                  Icons.email_outlined,
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                const SizedBox(height: 12),
-
-                // Password
-                TextField(
-                  controller: passwordC,
-                  obscureText: hidePassword,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock_outline, size: 20),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        hidePassword
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined,
-                        size: 20,
-                      ),
-                      onPressed: () =>
-                          setSheet(() => hidePassword = !hidePassword),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: Colors.black12),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(
-                        color: Colors.black12,
-                        width: 0.5,
-                      ),
-                    ),
+            child: Form(
+              key: formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Create New User',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
                   ),
-                ),
-                const SizedBox(height: 12),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'New user will receive login credentials via email',
+                    style: TextStyle(fontSize: 13, color: Colors.black45),
+                  ),
+                  const SizedBox(height: 20),
 
-                // Role picker
-                DropdownButtonFormField<String>(
-                  initialValue: selectedRole,
-                  hint: const Text(
-                    'Select role',
-                    style: TextStyle(fontSize: 14),
+                  // ── Username ──────────────────────────────────────────────
+                  _validatedField(
+                    controller: usernameC,
+                    label: 'Username',
+                    icon: Icons.person_outline,
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) {
+                        return 'Username is required';
+                      }
+                      if (val.trim().length < 3) {
+                        return 'Username must be at least 3 characters';
+                      }
+                      return null;
+                    },
                   ),
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.badge_outlined, size: 20),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: Colors.black12),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(
-                        color: Colors.black12,
-                        width: 0.5,
-                      ),
-                    ),
+                  const SizedBox(height: 12),
+
+                  // ── Email ─────────────────────────────────────────────────
+                  _validatedField(
+                    controller: emailC,
+                    label: 'Email',
+                    icon: Icons.email_outlined,
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) {
+                        return 'Email is required';
+                      }
+                      final emailRegex = RegExp(
+                        r'^[\w.-]+@[\w.-]+\.[a-zA-Z]{2,}$',
+                      );
+                      if (!emailRegex.hasMatch(val.trim())) {
+                        return 'Enter a valid email address';
+                      }
+                      return null;
+                    },
                   ),
-                  items: creatableRoles
-                      .map(
-                        (r) => DropdownMenuItem(
-                          value: r,
-                          child: Text(r, style: const TextStyle(fontSize: 14)),
+                  const SizedBox(height: 12),
+
+                  // ── Password ──────────────────────────────────────────────
+                  TextFormField(
+                    controller: passwordC,
+                    obscureText: hidePassword,
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          hidePassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          size: 20,
                         ),
-                      )
-                      .toList(),
-                  onChanged: (v) => setSheet(() => selectedRole = v),
-                ),
-                const SizedBox(height: 12),
-                _field(regionC, 'Region (optional)', Icons.map_outlined),
-                const SizedBox(height: 12),
-                _field(depotC, 'Depot (optional)', Icons.warehouse_outlined),
-                const SizedBox(height: 12),
-                IntlPhoneField(
-                  decoration: InputDecoration(
-                    labelText: 'Mobile',
-                    prefixIcon: const Icon(Icons.phone_outlined),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  initialCountryCode: 'IN',
-                  onChanged: (phone) {
-                    fullMobileNumber = phone.completeNumber;
-                  },
-                ),
-                const SizedBox(height: 20),
-
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: loading
-                        ? null
-                        : () async {
-                            if (usernameC.text.trim().isEmpty ||
-                                emailC.text.trim().isEmpty ||
-                                passwordC.text.trim().isEmpty ||
-                                selectedRole == null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Please fill all required fields',
-                                  ),
-                                ),
-                              );
-                              return;
-                            }
-                            setSheet(() => loading = true);
-                            try {
-                              await UserManagementService.createUser(
-                                username: usernameC.text.trim(),
-                                email: emailC.text.trim(),
-                                password: passwordC.text.trim(),
-                                role: selectedRole!,
-                                region: regionC.text.trim().isNotEmpty
-                                    ? regionC.text.trim()
-                                    : null,
-                                depot: depotC.text.trim().isNotEmpty
-                                    ? depotC.text.trim()
-                                    : null,
-                                mobileNumber: fullMobileNumber,
-                              );
-                              if (ctx.mounted) Navigator.pop(ctx);
-                              _loadUsers();
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('User created successfully'),
-                                  ),
-                                );
-                              }
-                            } catch (e) {
-                              setSheet(() => loading = false);
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      e.toString().replaceAll(
-                                        'Exception: ',
-                                        '',
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }
-                            }
-                          },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF534AB7),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        onPressed: () =>
+                            setSheet(() => hidePassword = !hidePassword),
                       ),
-                      elevation: 0,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Colors.black12),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(
+                          color: Colors.black12,
+                          width: 0.5,
+                        ),
+                      ),
                     ),
-                    child: loading
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text(
-                            'Create User',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) {
+                        return 'Password is required';
+                      }
+                      if (val.trim().length < 6) {
+                        return 'Password must be at least 6 characters';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
+                  // ── Role picker ───────────────────────────────────────────
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedRole,
+                    hint: const Text(
+                      'Select role',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.badge_outlined, size: 20),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Colors.black12),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(
+                          color: Colors.black12,
+                          width: 0.5,
+                        ),
+                      ),
+                    ),
+                    items: creatableRoles
+                        .map(
+                          (r) => DropdownMenuItem(
+                            value: r,
+                            child: Text(
+                              r,
+                              style: const TextStyle(fontSize: 14),
                             ),
                           ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setSheet(() => selectedRole = v),
+                    validator: (val) {
+                      if (val == null || val.isEmpty) {
+                        return 'Please select a role';
+                      }
+                      return null;
+                    },
                   ),
-                ),
-              ],
+                  const SizedBox(height: 12),
+
+                  // ── Region (optional) ─────────────────────────────────────
+                  _validatedField(
+                    controller: regionC,
+                    label: 'Region (optional)',
+                    icon: Icons.map_outlined,
+                    // No validator — field is optional
+                  ),
+                  const SizedBox(height: 12),
+
+                  // ── Depot (optional) ──────────────────────────────────────
+                  _validatedField(
+                    controller: depotC,
+                    label: 'Depot (optional)',
+                    icon: Icons.warehouse_outlined,
+                    // No validator — field is optional
+                  ),
+                  const SizedBox(height: 12),
+
+                  // ── Mobile ────────────────────────────────────────────────
+                  IntlPhoneField(
+                    decoration: InputDecoration(
+                      labelText: 'Mobile',
+                      prefixIcon: const Icon(Icons.phone_outlined),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      errorText: mobileError
+                          ? 'Mobile number is required'
+                          : null,
+                    ),
+                    initialCountryCode: 'IN',
+                    onChanged: (phone) {
+                      fullMobileNumber = phone.completeNumber;
+                      if (mobileError) {
+                        setSheet(() => mobileError = false);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 20),
+
+                  // ── Submit button ─────────────────────────────────────────
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: loading
+                          ? null
+                          : () async {
+                              // Validate mobile separately (IntlPhoneField is
+                              // not a FormField, so it's not covered by formKey)
+                              final isMobileEmpty =
+                                  fullMobileNumber == null ||
+                                  fullMobileNumber!.trim().isEmpty;
+                              setSheet(() => mobileError = isMobileEmpty);
+
+                              // Validate all TextFormFields
+                              final isFormValid = formKey.currentState!
+                                  .validate();
+
+                              if (!isFormValid || isMobileEmpty) return;
+
+                              setSheet(() => loading = true);
+                              try {
+                                await UserManagementService.createUser(
+                                  username: usernameC.text.trim(),
+                                  email: emailC.text.trim(),
+                                  password: passwordC.text.trim(),
+                                  role: selectedRole!,
+                                  region: regionC.text.trim().isNotEmpty
+                                      ? regionC.text.trim()
+                                      : null,
+                                  depot: depotC.text.trim().isNotEmpty
+                                      ? depotC.text.trim()
+                                      : null,
+                                  mobileNumber: fullMobileNumber,
+                                );
+                                if (ctx.mounted) Navigator.pop(ctx);
+                                _loadUsers();
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'User created successfully',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                setSheet(() => loading = false);
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        e.toString().replaceAll(
+                                          'Exception: ',
+                                          '',
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF534AB7),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: loading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text(
+                              'Create User',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -387,7 +463,6 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
             const Divider(thickness: 0.5),
             const SizedBox(height: 8),
 
-            // Toggle active status — SuperAdmin + Authority
             if (currentUser.isSuperAdmin || currentUser.isAuthority)
               _actionTile(
                 icon: (user['is_active'] == true)
@@ -426,7 +501,6 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                 },
               ),
 
-            // Change role — SuperAdmin only
             if (currentUser.isSuperAdmin)
               _actionTile(
                 icon: Icons.swap_horiz_rounded,
@@ -437,7 +511,228 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                   _showChangeRoleSheet(user);
                 },
               ),
+
+            // Edit user details — SuperAdmin + Authority
+            if (currentUser.isSuperAdmin || currentUser.isAuthority)
+              _actionTile(
+                icon: Icons.edit_outlined,
+                label: 'Edit user details',
+                color: const Color(0xFF5F5E5A),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showEditUserSheet(user);
+                },
+              ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // ── Edit user details sheet ───────────────────────────────────────────────
+
+  void _showEditUserSheet(Map<String, dynamic> user) {
+    final formKey = GlobalKey<FormState>();
+
+    // Pre-fill fields with existing user data
+    final usernameC = TextEditingController(
+      text: user['username'] as String? ?? '',
+    );
+    final emailC = TextEditingController(text: user['email'] as String? ?? '');
+    final regionC = TextEditingController(
+      text: user['region'] as String? ?? '',
+    );
+    final depotC = TextEditingController(text: user['depot'] as String? ?? '');
+
+    bool loading = false;
+    String? updatedMobile = user['mobile_number'] as String?;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => Padding(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            20,
+            20,
+            MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header
+                  const Text(
+                    'Edit User Details',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Editing details for ${user['username'] ?? ''}',
+                    style: const TextStyle(fontSize: 13, color: Colors.black45),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Username
+                  _validatedField(
+                    controller: usernameC,
+                    label: 'Username',
+                    icon: Icons.person_outline,
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) {
+                        return 'Username is required';
+                      }
+                      if (val.trim().length < 3) {
+                        return 'Username must be at least 3 characters';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Email
+                  _validatedField(
+                    controller: emailC,
+                    label: 'Email',
+                    icon: Icons.email_outlined,
+                    keyboardType: TextInputType.emailAddress,
+                    validator: (val) {
+                      if (val == null || val.trim().isEmpty) {
+                        return 'Email is required';
+                      }
+                      final emailRegex = RegExp(
+                        r'^[\w.-]+@[\w.-]+\.[a-zA-Z]{2,}$',
+                      );
+                      if (!emailRegex.hasMatch(val.trim())) {
+                        return 'Enter a valid email address';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Region (optional)
+                  _validatedField(
+                    controller: regionC,
+                    label: 'Region (optional)',
+                    icon: Icons.map_outlined,
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Depot (optional)
+                  _validatedField(
+                    controller: depotC,
+                    label: 'Depot (optional)',
+                    icon: Icons.warehouse_outlined,
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Mobile — pre-filled with existing number if available
+                  IntlPhoneField(
+                    decoration: InputDecoration(
+                      labelText: 'Mobile',
+                      prefixIcon: const Icon(Icons.phone_outlined),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    initialCountryCode: 'IN',
+                    initialValue: user['mobile_number'] as String? ?? '',
+                    onChanged: (phone) {
+                      updatedMobile = phone.completeNumber;
+                    },
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Save button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: loading
+                          ? null
+                          : () async {
+                              if (!formKey.currentState!.validate()) return;
+
+                              setSheet(() => loading = true);
+                              try {
+                                await UserManagementService.updateUser(
+                                  user['id'] as int,
+                                  username: usernameC.text.trim(),
+                                  email: emailC.text.trim(),
+                                  region: regionC.text.trim().isNotEmpty
+                                      ? regionC.text.trim()
+                                      : null,
+                                  depot: depotC.text.trim().isNotEmpty
+                                      ? depotC.text.trim()
+                                      : null,
+                                  mobileNumber: updatedMobile,
+                                );
+                                if (ctx.mounted) Navigator.pop(ctx);
+                                _loadUsers();
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'User details updated successfully',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                setSheet(() => loading = false);
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        e.toString().replaceAll(
+                                          'Exception: ',
+                                          '',
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF534AB7),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: loading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text(
+                              'Save Changes',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -605,8 +900,6 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Full-screen RBAC guard — Organisation cannot reach this tab (nav won't
-    // show it), but this is a defence-in-depth fallback.
     return RbacScreen(permission: Permission.userRead, child: _buildContent());
   }
 
@@ -635,7 +928,6 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
             preferredSize: const Size.fromHeight(0.5),
             child: Container(height: 0.5, color: Colors.black12),
           ),
-          // Create button — SuperAdmin only
           actions: [
             RbacGuard(
               roles: {AppRole.superAdmin},
@@ -758,7 +1050,6 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
             const SizedBox(height: 6),
             Row(
               children: [
-                // Role badge
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -787,7 +1078,6 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
             ),
           ],
         ),
-        // Actions — only show if current user can modify
         trailing: (currentUser.isSuperAdmin || currentUser.isAuthority)
             ? IconButton(
                 icon: const Icon(
@@ -868,15 +1158,19 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     );
   }
 
-  Widget _field(
-    TextEditingController c,
-    String label,
-    IconData icon, {
+  // ── Updated helper: TextFormField with validator support ──────────────────
+  Widget _validatedField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
     TextInputType keyboardType = TextInputType.text,
+    String? Function(String?)? validator,
   }) {
-    return TextField(
-      controller: c,
+    return TextFormField(
+      controller: controller,
       keyboardType: keyboardType,
+      validator: validator,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, size: 20),

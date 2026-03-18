@@ -54,12 +54,12 @@ class UserManagementService {
       final response = await _dio.post(
         AppConstants.endpointUsers,
         data: {
-          'username':      username,
-          'email':         email,
-          'password':      password,
-          'role':          role,
-          if (region != null)       'region':        region,
-          if (depot != null)        'depot':         depot,
+          'username': username,
+          'email': email,
+          'password': password,
+          'role': role,
+          if (region != null) 'region': region,
+          if (depot != null) 'depot': depot,
           if (mobileNumber != null) 'mobile_number': mobileNumber,
         },
       );
@@ -73,19 +73,23 @@ class UserManagementService {
     }
   }
 
-  /// Update a user's region, depot, active status, or mobile number.
+  /// Update a user's username, email, region, depot, active status, or mobile number.
   static Future<Map<String, dynamic>> updateUser(
     int userId, {
     bool? isActive,
+    String? username,
+    String? email,
     String? region,
     String? depot,
     String? mobileNumber,
   }) async {
     try {
       final data = <String, dynamic>{};
-      if (isActive != null)     data['is_active']     = isActive;
-      if (region != null)       data['region']        = region;
-      if (depot != null)        data['depot']         = depot;
+      if (isActive != null) data['is_active'] = isActive;
+      if (username != null) data['username'] = username;
+      if (email != null) data['email'] = email;
+      if (region != null) data['region'] = region;
+      if (depot != null) data['depot'] = depot;
       if (mobileNumber != null) data['mobile_number'] = mobileNumber;
 
       final response = await _dio.patch(

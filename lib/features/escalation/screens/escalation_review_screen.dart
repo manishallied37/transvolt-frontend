@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
 import '../services/escalation_api.dart';
-import '../../../../core/config/rbac.dart';
+// import '../../../../core/config/rbac.dart';
 import '../../../../core/providers/auth_provider.dart';
 import '../../../../core/providers/escalation_provider.dart';
 
@@ -373,6 +373,7 @@ class _EscalationReviewScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -836,18 +837,27 @@ class _EscalationReviewScreenState
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // ── name + badge + date row ──
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Text(
-                              c['user_name'] ?? 'Unknown',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
+                            Expanded(
+                              child: Wrap(
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                spacing: 6,
+                                children: [
+                                  Text(
+                                    c['user_name'] ?? 'Unknown',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  _roleBadge(role),
+                                ],
                               ),
                             ),
-                            const SizedBox(width: 6),
-                            _roleBadge(role),
-                            const Spacer(),
+                            const SizedBox(width: 8),
                             Text(
                               _formatDate(c['created_at']),
                               style: const TextStyle(
@@ -918,18 +928,27 @@ class _EscalationReviewScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // ── name + badge + date row ──
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Text(
-                      c['user_name'] ?? 'Unknown',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
+                    Expanded(
+                      child: Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 6,
+                        children: [
+                          Text(
+                            c['user_name'] ?? 'Unknown',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          _roleBadge(role),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 6),
-                    _roleBadge(role),
-                    const Spacer(),
+                    const SizedBox(width: 8),
                     Text(
                       _formatDate(c['created_at']),
                       style: const TextStyle(
@@ -971,12 +990,7 @@ class _EscalationReviewScreenState
   // — Comment Input —
   Widget _buildCommentInput() {
     return Container(
-      padding: EdgeInsets.fromLTRB(
-        16,
-        10,
-        16,
-        MediaQuery.of(context).viewInsets.bottom + 16,
-      ),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(top: BorderSide(color: Colors.black12, width: 0.5)),
@@ -1148,6 +1162,7 @@ class _EscalationReviewScreenState
 
   Widget _roleBadge(String role) {
     final colors = _roleColor(role);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
@@ -1173,14 +1188,16 @@ class _EscalationReviewScreenState
   }
 
   Map<String, Color> _roleColor(String role) {
-    switch (role) {
-      case AppRole.commandCenter:
+    switch (role.toUpperCase()) {
+      case 'COMMAND CENTER': // ← was AppRole.commandCenter = 'Command Center'
+      case 'CC':
         return {'bg': const Color(0xFFE6F1FB), 'text': const Color(0xFF185FA5)};
-      case AppRole.authority:
+      case 'AUTHORITY': // ← was AppRole.authority = 'Authority'
         return {'bg': const Color(0xFFFAEEDA), 'text': const Color(0xFF854F0B)};
-      case AppRole.superAdmin:
+      case 'SUPERADMIN': // ← was AppRole.superAdmin = 'SuperAdmin'
+      case 'ADMIN':
         return {'bg': const Color(0xFFEEEDFE), 'text': const Color(0xFF534AB7)};
-      case AppRole.organisation:
+      case 'ORGANISATION': // ← was AppRole.organisation = 'Organisation'
         return {'bg': const Color(0xFFEAF3DE), 'text': const Color(0xFF3B6D11)};
       default:
         return {'bg': const Color(0xFFF1EFE8), 'text': const Color(0xFF5F5E5A)};
