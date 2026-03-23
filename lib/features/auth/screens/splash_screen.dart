@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../services/auth_state.dart';
+import '../services/auth_service.dart';
+import '../services/token_storage.dart';
+import '../services/device_service.dart';
 import '../../../core/constants/app_constants.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -24,15 +27,42 @@ class _SplashScreenState extends State<SplashScreen> {
     await Future.delayed(const Duration(seconds: 2));
 
     try {
-      bool loggedIn = await AuthState.isLoggedIn();
+      // Step 1: Check if there are valid session tokens already in storage
+      // (normal case — app was not uninstalled).
+      final bool sessionActive = await AuthState.isLoggedIn();
 
       if (!mounted) return;
 
-      if (loggedIn) {
+      if (sessionActive) {
         Navigator.of(context).pushReplacementNamed(AppConstants.routeHome);
-      } else {
-        Navigator.of(context).pushReplacementNamed(AppConstants.routeLogin);
+        return;
       }
+
+      // Step 2: No active session. Check for a saved device token ("Remember Me").
+      // This handles the reinstall scenario — tokens are gone but device token
+      // may still be in secure storage (survives reinstall on Android/iOS).
+      final String? deviceToken = await TokenStorage.getDeviceToken();
+
+      if (deviceToken != null) {
+        final String deviceId = await DeviceService.getDeviceId();
+        final bool restored = await AuthService.deviceLogin(deviceToken, deviceId);
+
+        if (!mounted) return;
+
+        if (restored) {
+          // Silent login succeeded — go straight to home, no OTP needed.
+          Navigator.of(context).pushReplacementNamed(AppConstants.routeHome);
+          return;
+        }
+
+        // Device token expired or revoked — clean it up and go to login.
+        await TokenStorage.clearDeviceToken();
+      }
+
+      if (!mounted) return;
+
+      // Step 3: No valid session and no valid device token → normal login.
+      Navigator.of(context).pushReplacementNamed(AppConstants.routeLogin);
     } catch (e) {
       if (!mounted) return;
 

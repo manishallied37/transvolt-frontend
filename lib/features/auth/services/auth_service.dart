@@ -46,6 +46,7 @@ class AuthService {
             AppConstants.endpointVerifyOtp,
             AppConstants.endpointRefresh,
             AppConstants.endpointVerifyLoginOtp,
+            AppConstants.endpointDeviceLogin,
           ];
 
           final isPublic = publicPaths.any((p) => options.path.contains(p));
@@ -62,12 +63,22 @@ class AuthService {
         onError: (DioException e, handler) async {
           final path = e.requestOptions.path;
 
-          if (path.contains(AppConstants.endpointRefresh)) {
-            return handler.next(e);
-          }
-          if (path.contains(AppConstants.endpointLogout)) {
-            return handler.next(e);
-          }
+          // Never attempt a token refresh on these paths —
+          // they either don't need auth or are part of the auth flow itself.
+          final skipRefreshPaths = [
+            AppConstants.endpointRefresh,
+            AppConstants.endpointLogout,
+            AppConstants.endpointLogoutAll,
+            AppConstants.endpointLogin,
+            AppConstants.endpointVerifyLoginOtp,
+            AppConstants.endpointVerifyOtp,
+            AppConstants.endpointSendOtp,
+            AppConstants.endpointDeviceLogin,
+            AppConstants.endpointResetPassword,
+          ];
+
+          final shouldSkip = skipRefreshPaths.any((p) => path.contains(p));
+          if (shouldSkip) return handler.next(e);
 
           if (e.response?.statusCode == 401) {
             final refreshed = await AuthService.refreshAccessToken();
@@ -247,6 +258,13 @@ class AuthService {
         final data = response.data;
         await TokenStorage.saveAccessToken(data['tokens']['accessToken']);
         await TokenStorage.saveRefreshToken(data['tokens']['refreshToken']);
+
+        // Save the persistent device token so the app can restore the
+        // session silently after reinstall (no OTP needed next time).
+        if (data['deviceToken'] != null) {
+          await TokenStorage.saveDeviceToken(data['deviceToken']);
+        }
+
         return true;
       }
       return false;
@@ -259,17 +277,52 @@ class AuthService {
     }
   }
 
+  /// Called on app startup when a saved [deviceToken] is found in secure storage.
+  /// If the token is still valid (not expired / not revoked), the backend
+  /// issues a fresh session — no password or OTP required.
+  ///
+  /// Returns [true] and saves new tokens on success.
+  /// Returns [false] if the token has expired or the device is no longer trusted,
+  /// so the caller should redirect to the normal login screen.
+  static Future<bool> deviceLogin(String deviceToken, String deviceId) async {
+    try {
+      final response = await dio.post(
+        AppConstants.endpointDeviceLogin,
+        data: {'deviceToken': deviceToken, 'deviceId': deviceId},
+      );
+
+      if (response.statusCode == 200) {
+        final data = response.data;
+        await TokenStorage.saveAccessToken(data['tokens']['accessToken']);
+        await TokenStorage.saveRefreshToken(data['tokens']['refreshToken']);
+
+        // Backend rotates the device token on every use — always save the new one.
+        if (data['newDeviceToken'] != null) {
+          await TokenStorage.saveDeviceToken(data['newDeviceToken']);
+        }
+
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Device login error: $e');
+      return false;
+    }
+  }
+
   static Future<void> logout() async {
     try {
       await dio.post(AppConstants.endpointLogout);
     } catch (_) {}
-    await TokenStorage.clearTokens();
+    // clearAll removes access, refresh, AND device token so reinstalling
+    // the app won't bypass login after an explicit logout.
+    await TokenStorage.clearAll();
   }
 
   static Future<void> logoutAllDevices() async {
     try {
       await dio.post(AppConstants.endpointLogoutAll);
     } catch (_) {}
-    await TokenStorage.clearTokens();
+    await TokenStorage.clearAll();
   }
 }

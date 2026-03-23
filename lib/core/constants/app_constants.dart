@@ -32,6 +32,7 @@ class AppConstants {
   static const String endpointResetPassword = '$apiAuth/reset-password';
   static const String endpointLogout = '$apiAuth/logout';
   static const String endpointLogoutAll = '$apiAuth/logout-all';
+  static const String endpointDeviceLogin = '$apiAuth/device-login';
   static const String endpointAlertGenerate = '$apiAuth/api/alerts';
 
   // ── Dashboard endpoints ────────────────────────────────────
