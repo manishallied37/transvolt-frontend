@@ -47,7 +47,6 @@ flutter:
   assets:
     - images/transvolt_logo.svg
     - images/transvolt_logo.png
-    - .env
     - .env.development
     - .env.production
 flutter_native_splash:

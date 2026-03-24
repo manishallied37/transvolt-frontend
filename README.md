@@ -42,7 +42,7 @@ This command downloads all required dependencies.
 
 3. Configure Environment
 
-Create the .env file and .env.development and .env.production file from .env.example and configure the backend API URL.
+Create the .env.development and .env.production file from .env.example and configure the backend API URL.
 Keep .env.production file as API_URL= do not put any URL as this is not live yet
 
 Example:
