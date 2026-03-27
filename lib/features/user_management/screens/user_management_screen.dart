@@ -463,7 +463,8 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
             const Divider(thickness: 0.5),
             const SizedBox(height: 8),
 
-            if (currentUser.isSuperAdmin || currentUser.isAuthority)
+            // BRD §4.4 — Only SuperAdmin can deactivate users (backend enforces DELETE /v1/users/:id)
+            if (currentUser.isSuperAdmin)
               _actionTile(
                 icon: (user['is_active'] == true)
                     ? Icons.person_off_outlined

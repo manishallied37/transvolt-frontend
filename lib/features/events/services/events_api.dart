@@ -7,20 +7,14 @@ class EventApi {
   // Reuse the shared Dio instance — gets all auth interceptors for free
   static Dio dio = AuthService.dio;
 
-  static Future<Map<String, dynamic>> getAlerts({
-    int count = 2,
-    String? type,
-    Map<String, dynamic>? overrides,
-  }) async {
-    final body = {
-      'count': count,
-      if (type != null && type.isNotEmpty) 'type': type,
-      if (overrides != null) 'overrides': overrides,
-    };
-
-    final response = await dio.post(
-      AppConstants.endpointAlertGenerate,
-      data: body,
+  /// Fetches events from GET /v1/alerts.
+  ///
+  /// Gated by event:read on the backend — all roles (SuperAdmin, Command Center,
+  /// Authority, Organisation) have this permission, matching BRD §4.1/§4.2/§4.3.
+  static Future<Map<String, dynamic>> getAlerts({int count = 100}) async {
+    final response = await dio.get(
+      AppConstants.endpointAlerts,
+      queryParameters: {'count': count},
     );
 
     return response.data;

@@ -7,6 +7,7 @@ import '../services/escalation_api.dart';
 import 'package:intl/intl.dart';
 import 'dart:typed_data';
 import '../../../../core/providers/auth_provider.dart';
+import '../../../../core/constants/app_constants.dart';
 
 class EscalationFormScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> event;
@@ -223,7 +224,7 @@ class _EscalationFormScreenState extends ConsumerState<EscalationFormScreen> {
         );
         Navigator.pushNamedAndRemoveUntil(
           context,
-          "/escalation-worklist",
+          AppConstants.routeHome,
           (r) => false,
         );
       }

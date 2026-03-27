@@ -55,10 +55,15 @@ class ApiService {
   }
 
   /// ===== GET EVENT MEDIA USING ONLY 2 MOCK APIS =====
+  ///
+  /// [canFetchVideo] — pass `false` for Organisation (has camera:read but NOT
+  /// stream:read). They see images only, per BRD §4.3. Passing false skips the
+  /// /videoplayurl call entirely so no 403 is ever thrown.
   static Future<EventMediaResponse> getEventMedia(
     int eventId,
-    Map<String, dynamic> alertData,
-  ) async {
+    Map<String, dynamic> alertData, {
+    bool canFetchVideo = true,
+  }) async {
     debugPrint('[UI ACTION] View Media clicked for eventId=$eventId');
 
     final tenant = (alertData['tenantName'] ?? 'demo').toString().trim().isEmpty
@@ -120,7 +125,6 @@ class ApiService {
     ).replace(queryParameters: {'validityDuration': '3600'});
 
     final imageResponse = await _authorizedGetUri(imageUri);
-    final videoResponse = await _authorizedGetUri(videoUri);
 
     if (imageResponse.statusCode != 200) {
       throw Exception(
@@ -128,10 +132,17 @@ class ApiService {
       );
     }
 
-    if (videoResponse.statusCode != 200) {
-      throw Exception(
-        'Failed to fetch video URLs (${videoResponse.statusCode}): ${videoResponse.data}',
-      );
+    // BRD §4.3 — Organisation has camera:read (images) but NOT stream:read
+    // (video playback). Skip the video fetch entirely for those roles so we
+    // never hit a 403 on /videoplayurl.
+    Response? videoResponse;
+    if (canFetchVideo) {
+      videoResponse = await _authorizedGetUri(videoUri);
+      if (videoResponse.statusCode != 200) {
+        throw Exception(
+          'Failed to fetch video URLs (${videoResponse.statusCode}): ${videoResponse.data}',
+        );
+      }
     }
 
     final imageData =
@@ -139,10 +150,11 @@ class ApiService {
             as Map<String, dynamic>? ??
         <String, dynamic>{};
 
-    final videoData =
-        (videoResponse.data as Map<String, dynamic>)['data']
-            as Map<String, dynamic>? ??
-        <String, dynamic>{};
+    final videoData = videoResponse == null
+        ? <String, dynamic>{}
+        : (videoResponse.data as Map<String, dynamic>)['data']
+                  as Map<String, dynamic>? ??
+              <String, dynamic>{};
 
     final imageList = (imageData['images'] as List<dynamic>? ?? [])
         .asMap()

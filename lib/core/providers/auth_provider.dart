@@ -47,9 +47,15 @@ class CurrentUser {
   bool get canExportReports          => can(Permission.reportExport);
   bool get canManageUsers            => can(Permission.userCreate);
   bool get canChangeRoles            => can(Permission.userManageRoles);
-  bool get canViewStream             =>
-      (isCommandCenter || isSuperAdmin || isAuthority) &&
-      can(Permission.eventRead);
+
+  // BRD §4.1/§4.2 — full live stream (SuperAdmin, Command Center, Authority)
+  bool get canViewStream             => can(Permission.streamRead);
+
+  // BRD §4.3 — Organisation has limited streaming only
+  bool get canViewLimitedStream      => can(Permission.streamLimited);
+
+  // BRD §4.1/§4.2/§4.3 — camera:read for images and recorded video
+  bool get canViewCamera             => can(Permission.cameraRead);
 
   // ── Display helpers ──────────────────────────────────────────────
   String get displayRole {

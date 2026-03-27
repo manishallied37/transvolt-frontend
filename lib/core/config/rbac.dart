@@ -70,6 +70,11 @@ class Permission {
   static const String eventRead = 'event:read';
   static const String eventManage = 'event:manage';
 
+  // Camera & Streaming (BRD §4.1/§4.2/§4.3)
+  static const String cameraRead = 'camera:read';
+  static const String streamRead = 'stream:read';
+  static const String streamLimited = 'stream:limited';
+
   // System
   static const String systemHealth = 'system:health';
   static const String systemConfig = 'system:config';
@@ -100,6 +105,9 @@ const _allPermissions = [
   Permission.alertGenerate,
   Permission.eventRead,
   Permission.eventManage,
+  Permission.cameraRead,
+  Permission.streamRead,
+  Permission.streamLimited,
   Permission.systemHealth,
   Permission.systemConfig,
   Permission.auditRead,
@@ -108,9 +116,9 @@ const _allPermissions = [
 const Map<String, List<String>> rolePermissions = {
   AppRole.superAdmin: _allPermissions,
 
+  // BRD §4.2 — Authority: region-scoped
   AppRole.authority: [
     Permission.userRead,
-    // userCreate and userManageRoles removed — SuperAdmin only
     Permission.escalationRead,
     Permission.escalationUpdateStatus,
     Permission.commentRead,
@@ -118,6 +126,8 @@ const Map<String, List<String>> rolePermissions = {
     Permission.commentDelete,
     Permission.evidenceRead,
     Permission.evidenceUpload,
+    Permission.cameraRead,
+    Permission.streamRead,
     Permission.dashboardRead,
     Permission.reportRead,
     Permission.reportExport,
@@ -126,9 +136,9 @@ const Map<String, List<String>> rolePermissions = {
     Permission.auditRead,
   ],
 
+  // BRD §4.1 — Command Center: full visibility across all depots
   AppRole.commandCenter: [
     Permission.userRead,
-    // userCreate and userManageRoles removed — SuperAdmin only
     Permission.escalationCreate,
     Permission.escalationRead,
     Permission.escalationUpdateStatus,
@@ -137,6 +147,8 @@ const Map<String, List<String>> rolePermissions = {
     Permission.commentDelete,
     Permission.evidenceUpload,
     Permission.evidenceRead,
+    Permission.cameraRead,
+    Permission.streamRead,
     Permission.dashboardRead,
     Permission.reportRead,
     Permission.alertRead,
@@ -145,13 +157,17 @@ const Map<String, List<String>> rolePermissions = {
     Permission.eventManage,
   ],
 
+  // BRD §4.3 — Organisation: depot-scoped, limited streaming
   AppRole.organisation: [
+    Permission.userRead,
     Permission.escalationCreate,
     Permission.escalationRead,
     Permission.commentRead,
     Permission.commentCreate,
     Permission.evidenceRead,
     Permission.evidenceUpload,
+    Permission.cameraRead,
+    Permission.streamLimited,
     Permission.dashboardRead,
     Permission.alertRead,
     Permission.eventRead,

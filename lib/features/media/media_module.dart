@@ -1,6 +1,7 @@
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import 'services/api_service.dart';
@@ -8,8 +9,9 @@ import 'models/event_models.dart';
 import 'services/download_service.dart';
 import 'widgets/video_player_card.dart';
 import 'screens/downloads_screen.dart';
+import '../../core/providers/auth_provider.dart';
 
-class MediaModule extends StatefulWidget {
+class MediaModule extends ConsumerStatefulWidget {
   final int eventId;
   final Map<String, dynamic> alertData;
 
@@ -20,10 +22,10 @@ class MediaModule extends StatefulWidget {
   });
 
   @override
-  State<MediaModule> createState() => _MediaModuleState();
+  ConsumerState<MediaModule> createState() => _MediaModuleState();
 }
 
-class _MediaModuleState extends State<MediaModule>
+class _MediaModuleState extends ConsumerState<MediaModule>
     with SingleTickerProviderStateMixin {
   late Future<EventMediaResponse> _eventMediaFuture;
   final Set<int> _downloadingIds = <int>{};
@@ -32,19 +34,28 @@ class _MediaModuleState extends State<MediaModule>
   @override
   void initState() {
     super.initState();
+    // canViewStream is resolved after first build via ref.read — safe here
+    // because ConsumerStatefulWidget guarantees ref is available in initState.
+    final user = ref.read(currentUserProvider).value;
+    final canFetchVideo = user?.canViewStream ?? false;
+
     _eventMediaFuture = ApiService.getEventMedia(
       widget.eventId,
       widget.alertData,
+      canFetchVideo: canFetchVideo,
     );
 
     _tabController = TabController(length: 2, vsync: this);
   }
 
   Future<void> _reload() async {
+    final user = ref.read(currentUserProvider).value;
+    final canFetchVideo = user?.canViewStream ?? false;
     setState(() {
       _eventMediaFuture = ApiService.getEventMedia(
         widget.eventId,
         widget.alertData,
+        canFetchVideo: canFetchVideo,
       );
     });
     await _eventMediaFuture;

@@ -79,7 +79,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.light, // follows device setting
+      themeMode: ThemeMode.light,
       routes: {
         AppConstants.routeLogin: (_) => const LoginScreen(),
         AppConstants.routeRegister: (_) => const RegisterScreen(),

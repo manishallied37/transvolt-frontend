@@ -421,24 +421,31 @@ class _EscalationWorklistScreenState
                 ),
                 TextButton(
                   onPressed: () async {
-                    try {
-                      await EscalationApi().updateEscalationStatus(
-                        e['id'],
-                        AppConstants.statusUnderReview,
-                      );
-                      // Invalidate so list refreshes from server
-                      ref.invalidate(escalationListProvider);
-                      ref.invalidate(currentEscalationsProvider);
-                    } catch (err) {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Failed to update status: $err'),
-                          ),
+                    final user = ref.read(currentUserProvider).value;
+
+                    // BRD §4.3 — Organisation cannot update escalation status.
+                    // Authority / Command Center / SuperAdmin mark it UNDER_REVIEW
+                    // on open. Organisation just navigates directly to read-only view.
+                    if (user?.canUpdateEscalationStatus == true) {
+                      try {
+                        await EscalationApi().updateEscalationStatus(
+                          e['id'],
+                          AppConstants.statusUnderReview,
                         );
-                        return;
+                        ref.invalidate(escalationListProvider);
+                        ref.invalidate(currentEscalationsProvider);
+                      } catch (err) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Failed to update status: $err'),
+                            ),
+                          );
+                          return;
+                        }
                       }
                     }
+
                     if (mounted) {
                       Navigator.pushNamed(
                         context,

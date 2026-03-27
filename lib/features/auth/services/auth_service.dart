@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../../../../core/constants/app_constants.dart';
 import 'token_storage.dart';
-import 'device_service.dart';
 
 class AuthService {
   static String baseUrl = dotenv.env['API_URL']!;
@@ -41,7 +40,6 @@ class AuthService {
           // Public auth paths — no token needed
           final publicPaths = [
             AppConstants.endpointLogin,
-            AppConstants.endpointRegister,
             AppConstants.endpointSendOtp,
             AppConstants.endpointVerifyOtp,
             AppConstants.endpointRefresh,
@@ -143,51 +141,6 @@ class AuthService {
       return false;
     } catch (e) {
       debugPrint('Refresh token error: $e');
-      return false;
-    }
-  }
-
-  static Future<bool> register(
-    String username,
-    String email,
-    String password,
-    String role,
-    String region,
-    String depot,
-    String deviceId,
-    String mobileNumber,
-  ) async {
-    try {
-      final response = await dio.post(
-        AppConstants.endpointRegister,
-        data: {
-          'username': username,
-          'email': email,
-          'password': password,
-          'role': role,
-          'region': region,
-          'depot': depot,
-          'deviceId': deviceId,
-          'deviceName': 'Flutter Device',
-          'mobile_number': mobileNumber,
-        },
-      );
-
-      if (response.statusCode == 201) {
-        final data = response.data;
-        await TokenStorage.saveAccessToken(data['tokens']['accessToken']);
-        await TokenStorage.saveRefreshToken(data['tokens']['refreshToken']);
-        await DeviceService.registerDevice();
-        return true;
-      }
-      return false;
-    } catch (e) {
-      if (e is DioException) {
-        debugPrint('Register STATUS: ${e.response?.statusCode}');
-        debugPrint('Register DATA: ${e.response?.data}');
-      } else {
-        debugPrint('Register ERROR: $e');
-      }
       return false;
     }
   }

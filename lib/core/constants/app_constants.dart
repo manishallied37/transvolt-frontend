@@ -5,7 +5,8 @@ class AppConstants {
 
   // ── Route names ────────────────────────────────────────────
   static const String routeLogin = '/login';
-  static const String routeRegister = '/register';
+  static const String routeRegister =
+      '/register'; // placeholder — shows "contact admin" message
   static const String routeForgotPassword = '/forgot-password';
   static const String routeHome = '/home';
   static const String routeEscalationWorklist = '/escalation-worklist';
@@ -24,7 +25,6 @@ class AppConstants {
 
   // ── Auth endpoints ─────────────────────────────────────────
   static const String endpointLogin = '$apiAuth/login';
-  static const String endpointRegister = '$apiAuth/register';
   static const String endpointRefresh = '$apiAuth/refresh';
   static const String endpointSendOtp = '$apiAuth/send-otp';
   static const String endpointVerifyOtp = '$apiAuth/verify-otp';
@@ -33,7 +33,12 @@ class AppConstants {
   static const String endpointLogout = '$apiAuth/logout';
   static const String endpointLogoutAll = '$apiAuth/logout-all';
   static const String endpointDeviceLogin = '$apiAuth/device-login';
-  static const String endpointAlertGenerate = '$apiAuth/api/alerts';
+
+  // ── Alert endpoints ────────────────────────────────────────
+  // GET /v1/alerts — event:read gate, used by Events tab (all roles)
+  static const String endpointAlerts = apiAlerts;
+  // GET /v1/alerts/generate — alert:generate gate, Command Center / SuperAdmin only
+  static const String endpointAlertGenerate = '$apiAlerts/generate';
 
   // ── Dashboard endpoints ────────────────────────────────────
   static const String endpointDashboardMetrics = '$apiDashboard/metrics';
@@ -79,9 +84,6 @@ class AppConstants {
   };
 
   /// Roles that can access User Management.
-  static const Set<String> rolesWithUserManagement = {
-    AppRole.superAdmin,
-    AppRole.authority,
-    AppRole.commandCenter,
-  };
+  /// SuperAdmin only — per BRD decision, only SuperAdmin can create/manage users.
+  static const Set<String> rolesWithUserManagement = {AppRole.superAdmin};
 }
