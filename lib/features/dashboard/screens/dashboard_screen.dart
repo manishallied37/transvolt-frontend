@@ -208,36 +208,49 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     });
   }
 
+  // ── Responsive helpers ────────────────────────────────────────────────────
+
+  /// Number of KPI card columns based on available screen width.
+  /// Phone  (<600):  2 columns
+  /// Tablet (600–899): 3 columns
+  /// Large  (≥900):  4 columns
+  int _kpiColumnCount(double width) {
+    if (width >= 900) return 4;
+    if (width >= 600) return 3;
+    return 2;
+  }
+
+  /// Width of a single KPI card given the current screen width.
+  double _kpiCardWidth(double screenWidth) {
+    const double padding = 32; // 16 left + 16 right
+    const double spacing = 10;
+    final int cols = _kpiColumnCount(screenWidth);
+    return (screenWidth - padding - spacing * (cols - 1)) / cols;
+  }
+
   Widget buildDashboardGrid() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cardWidth = _kpiCardWidth(screenWidth);
+    // Chart is always full width
+    const double chartHeight = 340;
+    const double kpiHeight = 160;
+
     return ReorderableWrap(
       spacing: 10,
-
       runSpacing: 10,
-
       needsLongPressDraggable: true,
-
       onReorder: _onReorder,
-
       children: dashboardWidgets.map((widget) {
-        bool isChart = widget.key == const ValueKey("chart");
-
+        final bool isChart = widget.key == const ValueKey("chart");
         return Container(
           key: widget.key,
-
           margin: const EdgeInsets.symmetric(vertical: 10),
-
           child: SizedBox(
-            width: isChart
-                ? double.infinity
-                : (MediaQuery.of(context).size.width - 48) / 2,
-
-            height: isChart ? 340 : 160,
-
+            width: isChart ? double.infinity : cardWidth,
+            height: isChart ? chartHeight : kpiHeight,
             child: Material(
               elevation: 4,
-
               borderRadius: BorderRadius.circular(12),
-
               child: widget,
             ),
           ),
@@ -251,24 +264,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cardWidth = _kpiCardWidth(screenWidth);
+    const double chartHeight = 340;
+    const double kpiHeight = 160;
+
     return Wrap(
       spacing: 10,
-
       runSpacing: 10,
-
       children: dashboardWidgets.map((widget) {
-        bool isChart = widget.key == const ValueKey("chart");
-
+        final bool isChart = widget.key == const ValueKey("chart");
         return Container(
           margin: const EdgeInsets.symmetric(vertical: 10),
-
           child: SizedBox(
-            width: isChart
-                ? double.infinity
-                : (MediaQuery.of(context).size.width - 48) / 2,
-
-            height: isChart ? 340 : 160,
-
+            width: isChart ? double.infinity : cardWidth,
+            height: isChart ? chartHeight : kpiHeight,
             child: Material(
               elevation: 2,
               borderRadius: BorderRadius.circular(12),

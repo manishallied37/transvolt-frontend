@@ -11,6 +11,11 @@ import '../../auth/services/auth_service.dart';
 import '../../escalation/screens/escalation_worklist_screen.dart';
 import '../../user_management/screens/user_management_screen.dart';
 
+// ─── Breakpoint ───────────────────────────────────────────────────────────────
+// Screens >= 600 dp wide get a NavigationRail (tablet/desktop layout).
+// Screens < 600 dp get the existing BottomNavigationBar (phone layout).
+const double _kTabletBreakpoint = 600;
+
 class MainNavigationScreen extends ConsumerStatefulWidget {
   const MainNavigationScreen({super.key});
 
@@ -63,6 +68,8 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   @override
   Widget build(BuildContext context) {
     final userAsync = ref.watch(currentUserProvider);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTablet = screenWidth >= _kTabletBreakpoint;
 
     return userAsync.when(
       loading: () =>
@@ -80,22 +87,17 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
             final nav = Navigator.of(context);
             if (await _handleBack()) nav.pop();
           },
-          child: Scaffold(
-            body: tabs[safeIndex].screen,
-            bottomNavigationBar: BottomNavigationBar(
-              currentIndex: safeIndex,
-              onTap: _changeTab,
-              type: BottomNavigationBarType.fixed,
-              items: tabs
-                  .map(
-                    (t) => BottomNavigationBarItem(
-                      icon: Icon(t.icon),
-                      label: t.label,
-                    ),
-                  )
-                  .toList(),
-            ),
-          ),
+          child: isTablet
+              ? _TabletLayout(
+                  tabs: tabs,
+                  currentIndex: safeIndex,
+                  onTabChange: _changeTab,
+                )
+              : _PhoneLayout(
+                  tabs: tabs,
+                  currentIndex: safeIndex,
+                  onTabChange: _changeTab,
+                ),
         );
       },
     );
@@ -104,66 +106,66 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   List<_NavTab> _buildTabs(CurrentUser user) {
     final tabs = <_NavTab>[];
 
-    // ── Dashboard — all authenticated roles ──────────────────────────────────
     if (user.canViewDashboard) {
       tabs.add(
         _NavTab(
           icon: Icons.dashboard_outlined,
+          activeIcon: Icons.dashboard,
           label: 'Dashboard',
           screen: DashboardScreen(onNavigate: _changeTab),
         ),
       );
     }
 
-    // ── Events — all roles with event:read ───────────────────────────────────
     if (user.canViewEvents) {
       tabs.add(
         _NavTab(
           icon: Icons.warning_amber_outlined,
+          activeIcon: Icons.warning_amber_rounded,
           label: 'Events',
           screen: const EventsScreen(),
         ),
       );
     }
 
-    // ── Stream — SuperAdmin, Authority, Command Center ───────────────────────
     if (user.canViewStream) {
       tabs.add(
         _NavTab(
           icon: Icons.videocam_outlined,
+          activeIcon: Icons.videocam_rounded,
           label: 'Stream',
           screen: const StreamScreen(),
         ),
       );
     }
 
-    // ── Escalation — all roles with escalation:read ──────────────────────────
     if (user.canViewEscalations) {
       tabs.add(
         _NavTab(
           icon: Icons.report_problem_outlined,
+          activeIcon: Icons.report_problem,
           label: 'Escalations',
           screen: const EscalationWorklistScreen(),
         ),
       );
     }
 
-    // ── Reports — all roles with report:read ─────────────────────────────────
     if (user.canViewReports) {
       tabs.add(
         _NavTab(
           icon: Icons.bar_chart_outlined,
+          activeIcon: Icons.bar_chart,
           label: 'Reports',
           screen: const ReportsScreen(),
         ),
       );
     }
 
-    // ── User Management — SuperAdmin, Authority, Command Center ──────────────
     if (user.canManageUsers) {
       tabs.add(
         _NavTab(
           icon: Icons.manage_accounts_outlined,
+          activeIcon: Icons.manage_accounts,
           label: 'Users',
           screen: const UserManagementScreen(),
         ),
@@ -174,12 +176,100 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   }
 }
 
+// ─── Phone layout — BottomNavigationBar (unchanged behaviour) ─────────────────
+
+class _PhoneLayout extends StatelessWidget {
+  final List<_NavTab> tabs;
+  final int currentIndex;
+  final ValueChanged<int> onTabChange;
+
+  const _PhoneLayout({
+    required this.tabs,
+    required this.currentIndex,
+    required this.onTabChange,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: tabs[currentIndex].screen,
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: currentIndex,
+        onTap: onTabChange,
+        type: BottomNavigationBarType.fixed,
+        items: tabs
+            .map(
+              (t) => BottomNavigationBarItem(
+                icon: Icon(t.icon),
+                activeIcon: Icon(t.activeIcon),
+                label: t.label,
+              ),
+            )
+            .toList(),
+      ),
+    );
+  }
+}
+
+// ─── Tablet layout — NavigationRail on the left ───────────────────────────────
+
+class _TabletLayout extends StatelessWidget {
+  final List<_NavTab> tabs;
+  final int currentIndex;
+  final ValueChanged<int> onTabChange;
+
+  const _TabletLayout({
+    required this.tabs,
+    required this.currentIndex,
+    required this.onTabChange,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Row(
+        children: [
+          // Left rail
+          NavigationRail(
+            selectedIndex: currentIndex,
+            onDestinationSelected: onTabChange,
+            // Show labels on tablets (enough horizontal space)
+            labelType: NavigationRailLabelType.all,
+            minWidth: 80,
+            backgroundColor: Colors.white,
+            // Thin divider between rail and content
+            leading: const SizedBox(height: 8),
+            destinations: tabs
+                .map(
+                  (t) => NavigationRailDestination(
+                    icon: Icon(t.icon),
+                    selectedIcon: Icon(t.activeIcon),
+                    label: Text(t.label, style: const TextStyle(fontSize: 11)),
+                  ),
+                )
+                .toList(),
+          ),
+          // Thin vertical divider
+          const VerticalDivider(width: 1, thickness: 1),
+          // Main content — takes remaining width
+          Expanded(child: tabs[currentIndex].screen),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Model ────────────────────────────────────────────────────────────────────
+
 class _NavTab {
   final IconData icon;
+  final IconData activeIcon;
   final String label;
   final Widget screen;
+
   const _NavTab({
     required this.icon,
+    required this.activeIcon,
     required this.label,
     required this.screen,
   });
