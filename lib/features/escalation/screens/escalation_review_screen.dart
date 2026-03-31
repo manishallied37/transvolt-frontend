@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -24,6 +23,7 @@ class _EscalationReviewScreenState
   final EscalationApi api = EscalationApi();
   final TextEditingController _commentController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final ScrollController _sheetScrollController = ScrollController();
 
   Map? escalation;
   List evidence = [];
@@ -71,6 +71,7 @@ class _EscalationReviewScreenState
     _commentController.dispose();
     _reasonController.dispose();
     _scrollController.dispose();
+    _sheetScrollController.dispose();
     super.dispose();
   }
 
@@ -143,7 +144,9 @@ class _EscalationReviewScreenState
       final savedFile = File(savePath);
 
       if (!savedFile.existsSync()) {
-        await Dio().download(fullUrl, savePath);
+        // Use AuthService.dio so the Authorization header is included —
+        // the evidence endpoint is protected by EVIDENCE_READ permission.
+        await api.authenticatedDio.download(fullUrl, savePath);
       }
 
       setState(() => _downloadingFiles.remove(fileName));
@@ -177,7 +180,7 @@ class _EscalationReviewScreenState
             MediaQuery.of(ctx).viewInsets.bottom + 24,
           ),
           child: ListView(
-            controller: _scrollController,
+            controller: _sheetScrollController,
             shrinkWrap: true,
             children: [
               const Text(
@@ -472,7 +475,28 @@ class _EscalationReviewScreenState
   // — Incident Detail Card —
   Widget _buildIncidentCard() {
     final e = escalation!;
-    final sevLevel = (e['severity_level'] as num?)?.toInt() ?? 1;
+    // severity_level is now a string enum (LOW/MEDIUM/HIGH/CRITICAL).
+    // Fall back gracefully for any legacy integer values still in the DB.
+    final sevRaw = e['severity_level'];
+    final int sevLevel;
+    if (sevRaw is int) {
+      sevLevel = sevRaw;
+    } else {
+      switch (sevRaw?.toString().toUpperCase()) {
+        case 'CRITICAL':
+          sevLevel = 4;
+          break;
+        case 'HIGH':
+          sevLevel = 3;
+          break;
+        case 'MEDIUM':
+          sevLevel = 2;
+          break;
+        default:
+          sevLevel = 1;
+          break; // LOW or null
+      }
+    }
 
     return _card(
       child: Column(
@@ -1189,16 +1213,18 @@ class _EscalationReviewScreenState
   }
 
   Map<String, Color> _roleColor(String role) {
+    // DB stores roles as mixed-case ('Command Center', 'SuperAdmin', etc.)
+    // .toUpperCase() normalises them for case-insensitive matching.
     switch (role.toUpperCase()) {
-      case 'COMMAND CENTER': // ← was AppRole.commandCenter = 'Command Center'
+      case 'COMMAND CENTER':
       case 'CC':
         return {'bg': const Color(0xFFE6F1FB), 'text': const Color(0xFF185FA5)};
-      case 'AUTHORITY': // ← was AppRole.authority = 'Authority'
+      case 'AUTHORITY':
         return {'bg': const Color(0xFFFAEEDA), 'text': const Color(0xFF854F0B)};
-      case 'SUPERADMIN': // ← was AppRole.superAdmin = 'SuperAdmin'
+      case 'SUPERADMIN':
       case 'ADMIN':
         return {'bg': const Color(0xFFEEEDFE), 'text': const Color(0xFF534AB7)};
-      case 'ORGANISATION': // ← was AppRole.organisation = 'Organisation'
+      case 'ORGANISATION':
         return {'bg': const Color(0xFFEAF3DE), 'text': const Color(0xFF3B6D11)};
       default:
         return {'bg': const Color(0xFFF1EFE8), 'text': const Color(0xFF5F5E5A)};

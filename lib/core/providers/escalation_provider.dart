@@ -41,6 +41,26 @@ class EscalationFilter {
 
   bool get hasActiveFilters =>
       status != null || type != null || dateRange != null || search.isNotEmpty;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is EscalationFilter &&
+          status == other.status &&
+          type == other.type &&
+          dateRange == other.dateRange &&
+          search == other.search &&
+          page == other.page &&
+          limit == other.limit;
+
+  @override
+  int get hashCode =>
+      status.hashCode ^
+      type.hashCode ^
+      dateRange.hashCode ^
+      search.hashCode ^
+      page.hashCode ^
+      limit.hashCode;
 }
 
 // ── Filter notifier ───────────────────────────────────────────
@@ -82,21 +102,26 @@ final escalationFilterProvider =
 
 // ── Escalation list provider ──────────────────────────────────
 // Cached per filter state — won't re-fetch if filter hasn't changed
-final escalationListProvider = FutureProvider.autoDispose
-    .family<Map<String, dynamic>, EscalationFilter>((ref, filter) async {
-      final api = EscalationApi();
-      final response = await api.getEscalations(
-        page: filter.page,
-        limit: filter.limit,
-        status: filter.status,
-        dateRange: filter.dateRange,
-      );
-      return response as Map<String, dynamic>;
-    });
+final escalationListProvider = FutureProvider.autoDispose<Map<String, dynamic>>(
+  (ref) async {
+    final filter = ref.watch(escalationFilterProvider);
 
+    final api = EscalationApi();
+
+    final response = await api.getEscalations(
+      page: filter.page,
+      limit: filter.limit,
+      status: filter.status,
+      type: filter.type,
+      dateRange: filter.dateRange,
+      search: filter.search,
+    );
+
+    return response as Map<String, dynamic>;
+  },
+);
 // ── Combined provider: current filter → list ──────────────────
 final currentEscalationsProvider =
     FutureProvider.autoDispose<Map<String, dynamic>>((ref) {
-      final filter = ref.watch(escalationFilterProvider);
-      return ref.watch(escalationListProvider(filter).future);
+      return ref.watch(escalationListProvider.future);
     });

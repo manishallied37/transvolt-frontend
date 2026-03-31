@@ -265,21 +265,31 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // ── Region (optional) ─────────────────────────────────────
+                  // ── Region ─────────────────────────────────────
                   _validatedField(
                     controller: regionC,
-                    label: 'Region (optional)',
+                    label: 'Region',
                     icon: Icons.map_outlined,
-                    // No validator — field is optional
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Region is required';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 12),
 
-                  // ── Depot (optional) ──────────────────────────────────────
+                  // ── Depot ──────────────────────────────────────
                   _validatedField(
                     controller: depotC,
-                    label: 'Depot (optional)',
+                    label: 'Depot',
                     icon: Icons.warehouse_outlined,
-                    // No validator — field is optional
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Depot is required';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 12),
 
@@ -620,19 +630,29 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Region (optional)
                   _validatedField(
                     controller: regionC,
-                    label: 'Region (optional)',
+                    label: 'Region',
                     icon: Icons.map_outlined,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Region is required';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 12),
 
-                  // Depot (optional)
                   _validatedField(
                     controller: depotC,
-                    label: 'Depot (optional)',
+                    label: 'Depot',
                     icon: Icons.warehouse_outlined,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Depot is required';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 12),
 

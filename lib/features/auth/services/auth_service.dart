@@ -107,17 +107,18 @@ class AuthService {
         AppConstants.endpointLogin,
         data: {'login': login, 'password': password, 'deviceId': deviceId},
       );
-      if (response.statusCode == 200) return response.data;
+      if (response.statusCode == 200) return response.data as Map<String, dynamic>;
       return null;
-    } catch (e) {
-      if (e is DioException) {
-        debugPrint('Login STATUS: ${e.response?.statusCode}');
-        debugPrint('Login DATA: ${e.response?.data}');
-      } else {
-        debugPrint('Login ERROR: $e');
-      }
+    } on DioException catch (e) {
+      debugPrint('Login STATUS: \${e.response?.statusCode}');
+      debugPrint('Login DATA: \${e.response?.data}');
+      // Rethrow with the server's message so the UI can show the right error
+      // (e.g. "Account temporarily locked" vs "Invalid credentials")
+      final serverMessage = e.response?.data is Map
+          ? (e.response!.data['message'] as String?)
+          : null;
+      throw Exception(serverMessage ?? 'Login failed. Please try again.');
     }
-    return null;
   }
 
   static Future<bool> refreshAccessToken() async {

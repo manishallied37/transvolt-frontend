@@ -6,12 +6,19 @@ import 'auth_service.dart';
 class ApiService {
   static Dio dio = AuthService.dio;
 
-  static Future getDashboard() async {
+  /// Fetches the dashboard metrics for the current user.
+  /// Throws a descriptive [Exception] if the request fails.
+  static Future<Map<String, dynamic>> getDashboard() async {
     try {
       final response = await dio.get(AppConstants.endpointDashboardMetrics);
-      return response.data;
+      final data = response.data;
+      if (data is Map<String, dynamic>) return data;
+      throw Exception('Unexpected response format from dashboard API');
     } on DioException catch (e) {
-      throw Exception(e.response?.data ?? e.message);
+      final message = e.response?.data is Map
+          ? (e.response!.data['message'] ?? e.message)
+          : e.message;
+      throw Exception('Dashboard API error: $message');
     }
   }
 }

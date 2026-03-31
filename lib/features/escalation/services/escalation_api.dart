@@ -8,6 +8,9 @@ class EscalationApi {
   static Dio dio = AuthService.dio;
   String get baseUrl => dio.options.baseUrl;
 
+  // Expose the authenticated Dio instance for file downloads from protected endpoints.
+  Dio get authenticatedDio => dio;
+
   Future createEscalation(
     Map<String, dynamic> data,
     List<File> files, {
@@ -33,12 +36,18 @@ class EscalationApi {
     int page = 1,
     int limit = 20,
     String? status,
+    String? type,
     String? dateRange,
+    String? search,
   }) async {
     final Map<String, dynamic> queryParams = {
       'page': page,
       'limit': limit,
+
       if (status != null) 'status': status,
+      if (type != null) 'type': type,
+      if (search != null && search.isNotEmpty) 'search': search,
+
       if (dateRange == 'Today') 'dateRange': 'today',
       if (dateRange == 'Last 7 days') 'dateRange': '7d',
       if (dateRange == 'Last 30 days') 'dateRange': '30d',

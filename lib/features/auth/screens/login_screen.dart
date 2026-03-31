@@ -37,7 +37,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final result = await AuthService.login(
         _loginController.text.trim(),
-        _passwordController.text.trim(),
+        _passwordController.text,
         deviceId,
       );
 
@@ -57,8 +57,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         );
-      } else {
-        _showMessage("Invalid username or password");
       }
     } catch (e) {
       _showMessage(e.toString().replaceAll("Exception:", "").trim());
@@ -205,11 +203,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 10),
 
-                OutlinedButton(
-                  onPressed: () {
-                    Navigator.pushNamed(context, AppConstants.routeRegister);
-                  },
-                  child: const Text('Create Account'),
+                // Registration is admin-managed — new accounts are created by SuperAdmin.
+                // Show informational text instead of a misleading "Create Account" button.
+                Center(
+                  child: Text(
+                    'Need access? Contact your system administrator.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ],
             ),
