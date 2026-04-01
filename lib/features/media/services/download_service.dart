@@ -13,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/downloaded_media_model.dart';
 import '../models/event_models.dart';
+import '../../auth/services/auth_service.dart';
 
 class DownloadService {
   static const String _downloadsKey = 'downloaded_media_items';

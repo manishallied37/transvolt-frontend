@@ -1,6 +1,24 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../features/auth/services/auth_state.dart';
 import '../config/rbac.dart';
+import '../../features/auth/services/token_storage.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
+import '../../features/auth/services/auth_service.dart';
+
+class CachedUser {
+  static Map<String, dynamic>? _decoded;
+
+  static void set(Map<String, dynamic> decoded) {
+    _decoded = decoded;
+  }
+
+  static Map<String, dynamic>? get() {
+    return _decoded;
+  }
+
+  static void clear() {
+    _decoded = null;
+  }
+}
 
 /// Immutable snapshot of the currently authenticated user,
 /// decoded from the JWT and enriched with RBAC helpers.
@@ -88,17 +106,41 @@ class CurrentUser {
 final currentUserProvider = FutureProvider.autoDispose<CurrentUser>((
   ref,
 ) async {
-  final role = await AuthState.getUserRole();
-  final region = await AuthState.getRegion();
-  final depot = await AuthState.getDepot();
-  final username = await AuthState.getUsername();
-  final email = await AuthState.getUserEmail();
+  // 🔥 Step 1: Return cached user if available
+  final cached = CachedUser.get();
+  if (cached != null) {
+    return CurrentUser(
+      role: cached['role'],
+      region: cached['region'],
+      depot: cached['depot'],
+      username: cached['username'],
+      email: cached['email'],
+    );
+  }
+
+  // 🔥 Step 2: Read token ONCE
+  String? token = await TokenStorage.getAccessToken();
+
+  // 🔥 Step 3: Handle expiry safely using your LOCKED refresh
+  if (token == null || JwtDecoder.isExpired(token)) {
+    final refreshed = await AuthService.lockedRefresh();
+    if (!refreshed) throw Exception('Session expired');
+
+    token = await TokenStorage.getAccessToken();
+    if (token == null) throw Exception('No token after refresh');
+  }
+
+  // 🔥 Step 4: Decode ONCE
+  final decoded = JwtDecoder.decode(token);
+
+  // 🔥 Step 5: Cache it for session
+  CachedUser.set(decoded);
 
   return CurrentUser(
-    role: role,
-    region: region,
-    depot: depot,
-    username: username,
-    email: email,
+    role: decoded['role'] as String?,
+    region: decoded['region'] as String?,
+    depot: decoded['depot'] as String?,
+    username: decoded['username'] as String?,
+    email: decoded['email'] as String?,
   );
 });

@@ -22,6 +22,7 @@ class AppConstants {
   static const String apiEscalations = '/v1/escalations';
   static const String apiEvidence = '/v1/evidence';
   static const String apiUsers = '/v1/users';
+  static const String apiReports = '/v1/report';
 
   // ── Auth endpoints ─────────────────────────────────────────
   static const String endpointLogin = '$apiAuth/login';

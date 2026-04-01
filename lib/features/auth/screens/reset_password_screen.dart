@@ -4,11 +4,13 @@ import '../services/auth_service.dart';
 class ResetPasswordScreen extends StatefulWidget {
   final String identifier;
   final String method;
+  final String resetToken;
 
   const ResetPasswordScreen({
     super.key,
     required this.identifier,
     required this.method,
+    required this.resetToken,
   });
 
   @override
@@ -35,6 +37,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         widget.identifier.trim(),
         _passwordController.text.trim(),
         widget.method,
+        widget.resetToken,
       );
 
       if (!mounted) return;

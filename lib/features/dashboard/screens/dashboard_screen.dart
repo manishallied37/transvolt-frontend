@@ -181,7 +181,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     if (confirm != true) return;
 
-    await TokenStorage.clearTokens();
+    await TokenStorage.clearAll();
 
     if (!mounted) return;
 

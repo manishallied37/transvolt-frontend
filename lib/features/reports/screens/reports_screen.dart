@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/config/rbac.dart';
 import '../../../../core/providers/auth_provider.dart';
 import '../../../../shared/widgets/rbac_guard.dart';
+import '../../reports/screens/audit_report_screen.dart';
 
 class ReportsScreen extends ConsumerWidget {
   const ReportsScreen({super.key});
@@ -109,7 +110,14 @@ class ReportsScreen extends ConsumerWidget {
                     icon: Icons.history_outlined,
                     iconBg: const Color(0xFFEEEDFE),
                     iconColor: const Color(0xFF534AB7),
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AuditReportScreen(),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 10),
                 ],

@@ -557,6 +557,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
 
     bool loading = false;
     String? updatedMobile = user['mobile_number'] as String?;
+    final isOrganisation = (user['role'] as String?) == AppRole.organisation;
 
     showModalBottomSheet(
       context: context,
@@ -645,11 +646,12 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
 
                   _validatedField(
                     controller: depotC,
-                    label: 'Depot',
+                    label: isOrganisation ? 'Depot *' : 'Depot (optional)',
                     icon: Icons.warehouse_outlined,
                     validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Depot is required';
+                      if (isOrganisation &&
+                          (value == null || value.trim().isEmpty)) {
+                        return 'Depot is required for Organisation users';
                       }
                       return null;
                     },
@@ -1134,7 +1136,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.chevron_right),
-            onPressed: _page < _totalPages
+            onPressed: (!_loading && _page < _totalPages)
                 ? () {
                     _page++;
                     _loadUsers();

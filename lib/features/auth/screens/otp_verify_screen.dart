@@ -77,7 +77,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     setState(() => _resendLoading = true);
 
     try {
-      final success = await AuthService.sendOtp(
+      await AuthService.sendOtp(
         widget.identifier,
         widget.method,
       );
@@ -86,19 +86,15 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
       setState(() => _resendLoading = false);
 
-      if (success) {
-        _otpController.clear();
-        _otp = "";
-        _startTimer();
-        _showMessage("OTP resent successfully");
-      } else {
-        _showMessage("Failed to resend OTP");
-      }
+      _otpController.clear();
+      _otp = "";
+      _startTimer();
+      _showMessage("OTP resent successfully");
     } catch (e) {
       if (mounted) {
         setState(() => _resendLoading = false);
+        _showMessage(e.toString().replaceAll("Exception:", "").trim());
       }
-      _showMessage("Something went wrong");
     }
   }
 
@@ -115,45 +111,46 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     try {
       final deviceId = await DeviceService.getDeviceId();
 
-      bool success;
-
       if (widget.flow == "login") {
-        success = await AuthService.verifyLoginOtp(
+        final success = await AuthService.verifyLoginOtp(
           widget.identifier,
           _otp,
           deviceId,
         );
-      } else {
-        success = await AuthService.verifyOtp(
-          widget.identifier,
-          _otp,
-          widget.method,
-        );
-      }
 
-      if (!mounted) return;
+        if (!mounted) return;
+        setState(() => _loading = false);
 
-      setState(() => _loading = false);
-
-      if (success) {
-        if (widget.flow == "login") {
+        if (success) {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
           );
         } else {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ResetPasswordScreen(
-                identifier: widget.identifier,
-                method: widget.method,
-              ),
-            ),
-          );
+          _showMessage("Invalid OTP");
         }
       } else {
-        _showMessage("Invalid OTP");
+        final response = await AuthService.verifyOtp(
+          widget.identifier,
+          _otp,
+          widget.method,
+        );
+
+        final resetToken = response['resetToken'];
+
+        if (!mounted) return;
+        setState(() => _loading = false);
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ResetPasswordScreen(
+              identifier: widget.identifier,
+              method: widget.method,
+              resetToken: resetToken,
+            ),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {

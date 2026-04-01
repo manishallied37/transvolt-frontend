@@ -27,7 +27,7 @@ class UserManagementService {
   }
 
   /// Get single user by id.
-  static Future<Map<String, dynamic>> getUserById(int userId) async {
+  static Future<Map<String, dynamic>> getUserById(String userId) async {
     try {
       final response = await _dio.get('${AppConstants.endpointUsers}/$userId');
       if (response.statusCode == 200) {
@@ -127,7 +127,7 @@ class UserManagementService {
   }
 
   /// Deactivate a user (SuperAdmin only — soft delete).
-  static Future<void> deactivateUser(int userId) async {
+  static Future<void> deactivateUser(String userId) async {
     try {
       final response = await _dio.delete(
         '${AppConstants.endpointUsers}/$userId',
