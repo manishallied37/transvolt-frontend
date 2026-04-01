@@ -1,7 +1,6 @@
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import 'services/api_service.dart';
@@ -9,9 +8,9 @@ import 'models/event_models.dart';
 import 'services/download_service.dart';
 import 'widgets/video_player_card.dart';
 import 'screens/downloads_screen.dart';
-import '../../core/providers/auth_provider.dart';
+import '../stream/screens/stream_screen.dart';
 
-class MediaModule extends ConsumerStatefulWidget {
+class MediaModule extends StatefulWidget {
   final int eventId;
   final Map<String, dynamic> alertData;
 
@@ -22,10 +21,10 @@ class MediaModule extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<MediaModule> createState() => _MediaModuleState();
+  State<MediaModule> createState() => _MediaModuleState();
 }
 
-class _MediaModuleState extends ConsumerState<MediaModule>
+class _MediaModuleState extends State<MediaModule>
     with SingleTickerProviderStateMixin {
   late Future<EventMediaResponse> _eventMediaFuture;
   final Set<int> _downloadingIds = <int>{};
@@ -34,28 +33,19 @@ class _MediaModuleState extends ConsumerState<MediaModule>
   @override
   void initState() {
     super.initState();
-    // canViewStream is resolved after first build via ref.read — safe here
-    // because ConsumerStatefulWidget guarantees ref is available in initState.
-    final user = ref.read(currentUserProvider).value;
-    final canFetchVideo = user?.canViewStream ?? false;
-
     _eventMediaFuture = ApiService.getEventMedia(
       widget.eventId,
       widget.alertData,
-      canFetchVideo: canFetchVideo,
     );
 
     _tabController = TabController(length: 2, vsync: this);
   }
 
   Future<void> _reload() async {
-    final user = ref.read(currentUserProvider).value;
-    final canFetchVideo = user?.canViewStream ?? false;
     setState(() {
       _eventMediaFuture = ApiService.getEventMedia(
         widget.eventId,
         widget.alertData,
-        canFetchVideo: canFetchVideo,
       );
     });
     await _eventMediaFuture;
@@ -107,6 +97,79 @@ class _MediaModuleState extends ConsumerState<MediaModule>
         ),
       ),
     );
+  }
+
+  void _openLivestream(EventItem event) {
+    final vehicle =
+        (widget.alertData['vehicle'] as Map?)?.cast<String, dynamic>() ??
+        <String, dynamic>{};
+
+    final camera =
+        (widget.alertData['camera'] as Map?)?.cast<String, dynamic>() ??
+        <String, dynamic>{};
+
+    final driver =
+        (widget.alertData['driver'] as Map?)?.cast<String, dynamic>() ??
+        <String, dynamic>{};
+
+    final details =
+        (widget.alertData['details'] as Map?)?.cast<String, dynamic>() ??
+        <String, dynamic>{};
+
+    final location =
+        (details['location'] as Map?)?.cast<String, dynamic>() ??
+        <String, dynamic>{};
+
+    final vehicleNumber = _firstNonEmptyText([vehicle['vehicleNumber']]);
+    final vin = _firstNonEmptyText([vehicle['vin']]);
+    final licensePlateNumber = _firstNonEmptyText([
+      vehicle['licensePlateNumber'],
+    ]);
+    final cameraId = _firstNonEmptyText([camera['id']]);
+
+    // ── NEW: extract driver + event context ──
+    final driverName = [driver['firstName'], driver['lastName']]
+        .where((v) => (v ?? '').toString().trim().isNotEmpty)
+        .map((v) => v.toString().trim())
+        .join(' ');
+
+    final latestEventType = _firstNonEmptyText([details['typeDescription']]);
+    final latestSeverity = _firstNonEmptyText([details['severityDescription']]);
+    final latestLocation =
+        [location['address'], location['city'], location['state']]
+            .where((v) => (v ?? '').toString().trim().isNotEmpty)
+            .map((v) => v.toString().trim())
+            .join(', ');
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => StreamScreen(
+          launchArgs: StreamScreenLaunchArgs(
+            vehicleNumber: vehicleNumber.isEmpty ? null : vehicleNumber,
+            vin: vin.isEmpty ? null : vin,
+            licensePlateNumber: licensePlateNumber.isEmpty
+                ? null
+                : licensePlateNumber,
+            cameraId: cameraId.isEmpty ? null : cameraId,
+            // ── NEW fields ──
+            driverName: driverName.isEmpty ? null : driverName,
+            latestEventType: latestEventType.isEmpty ? null : latestEventType,
+            latestSeverity: latestSeverity.isEmpty ? null : latestSeverity,
+            latestLocation: latestLocation.isEmpty ? null : latestLocation,
+            autoPlay: true,
+            prefillSearch: true,
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _firstNonEmptyText(List<dynamic> values) {
+    for (final value in values) {
+      final text = (value ?? '').toString().trim();
+      if (text.isNotEmpty) return text;
+    }
+    return '';
   }
 
   String _resolveMediaUrl(String? rawUrl) {
@@ -338,35 +401,43 @@ class _MediaModuleState extends ConsumerState<MediaModule>
                                     },
                                     loadingBuilder: (context, child, progress) {
                                       if (progress == null) return child;
-                                      return const Center(
-                                        child: CircularProgressIndicator(),
+                                      return Container(
+                                        color: Colors.grey.shade200,
+                                        alignment: Alignment.center,
+                                        child:
+                                            const CircularProgressIndicator(),
                                       );
                                     },
                                   ),
                                 ),
                           Positioned(
-                            top: 8,
-                            right: 8,
+                            top: 10,
+                            right: 10,
                             child: Material(
-                              color: Colors.black45,
-                              shape: const CircleBorder(),
-                              child: IconButton(
-                                icon: isDownloading
-                                    ? const SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: Colors.white,
-                                        ),
-                                      )
-                                    : const Icon(
-                                        Icons.download_rounded,
-                                        color: Colors.white,
-                                      ),
-                                onPressed: isDownloading
+                              color: Colors.black54,
+                              borderRadius: BorderRadius.circular(20),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(20),
+                                onTap: isDownloading
                                     ? null
                                     : () => _downloadMedia(media),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8),
+                                  child: isDownloading
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : const Icon(
+                                          Icons.download,
+                                          size: 18,
+                                          color: Colors.white,
+                                        ),
+                                ),
                               ),
                             ),
                           ),
@@ -376,14 +447,13 @@ class _MediaModuleState extends ConsumerState<MediaModule>
                     Padding(
                       padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
                       child: Text(
-                        media.title.trim().isEmpty
-                            ? 'Untitled image'
-                            : media.title.trim(),
+                        media.title.trim().isEmpty ? 'Image' : media.title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 15,
+                          fontSize: 13,
                           fontWeight: FontWeight.w600,
+                          color: Color(0xFF17212B),
                         ),
                       ),
                     ),
@@ -406,28 +476,104 @@ class _MediaModuleState extends ConsumerState<MediaModule>
     );
   }
 
-  Widget _buildVideos(List<MediaItem> videos) {
+  Widget _buildVideos(EventItem event, List<MediaItem> videos) {
     if (videos.isEmpty) {
-      return const _EmptyState(
-        icon: Icons.videocam_off_outlined,
-        title: 'No videos available',
-        subtitle: 'No video clips were returned for this event.',
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildLivestreamLaunchCard(event),
+          const SizedBox(height: 16),
+          const _EmptyState(
+            icon: Icons.videocam_off_outlined,
+            title: 'No videos available',
+            subtitle: 'No video clips were returned for this event.',
+          ),
+        ],
       );
     }
 
     return Column(
-      children: videos
-          .map(
-            (video) => Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: VideoPlayerCard(
-                media: _copyVideoWithResolvedUrl(video),
-                onDownload: () => _downloadMedia(video),
-                isDownloading: _downloadingIds.contains(video.id),
-              ),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildLivestreamLaunchCard(event),
+        const SizedBox(height: 16),
+        ...videos.map(
+          (video) => Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: VideoPlayerCard(
+              media: _copyVideoWithResolvedUrl(video),
+              onDownload: () => _downloadMedia(video),
+              isDownloading: _downloadingIds.contains(video.id),
             ),
-          )
-          .toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLivestreamLaunchCard(EventItem event) {
+    final vehicle =
+        (widget.alertData['vehicle'] as Map?)?.cast<String, dynamic>() ??
+        <String, dynamic>{};
+    final camera =
+        (widget.alertData['camera'] as Map?)?.cast<String, dynamic>() ??
+        <String, dynamic>{};
+
+    final vehicleNumber = _firstNonEmptyText([
+      vehicle['vehicleNumber'],
+      event.vehicleId,
+    ]);
+    final cameraId = _firstNonEmptyText([camera['id']]);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F9FC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE3E6EE)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.live_tv_outlined, color: Color(0xFF17212B)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Watch livestream for this event',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF17212B),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            vehicleNumber.isEmpty
+                ? 'Open the livestream screen and start playback for the related vehicle.'
+                : 'Vehicle: $vehicleNumber${cameraId.isNotEmpty ? ' • Camera: $cameraId' : ''}',
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF5B6472),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: () => _openLivestream(event),
+              icon: const Icon(Icons.play_arrow),
+              label: const Text('Play Livestream'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -532,7 +678,7 @@ class _MediaModuleState extends ConsumerState<MediaModule>
               _buildTabContent(
                 storageKey: 'event-media-videos',
                 event: data.event,
-                content: _buildVideos(data.videos),
+                content: _buildVideos(data.event, data.videos),
               ),
             ],
           );
@@ -664,9 +810,12 @@ class _ImageGalleryViewerScreenState extends State<_ImageGalleryViewerScreen> {
                 ? const SizedBox(
                     width: 20,
                     height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
                   )
-                : const Icon(Icons.download),
+                : const Icon(Icons.download, color: Colors.white),
             onPressed: isDownloading
                 ? null
                 : () async {
