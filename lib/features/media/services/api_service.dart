@@ -4,19 +4,49 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import '../models/event_models.dart';
 import '../../auth/services/auth_service.dart';
+import '../../auth/services/token_storage.dart';
 
 class ApiService {
   static String baseUrl = dotenv.env['API_URL']!;
-
-  // Reuse the shared Dio instance with interceptors
-  static Dio dio = AuthService.dio;
+  static Dio dio = Dio(BaseOptions(baseUrl: baseUrl));
 
   static Future<Response> _authorizedGetUri(Uri uri) async {
+    String? token = await TokenStorage.getAccessToken();
+
     debugPrint('[API] GET ${uri.toString()}');
-    final response = await dio.getUri(uri);
+
+    Response response = await dio.getUri(
+      uri,
+      options: Options(headers: {"Authorization": "Bearer $token"}),
+    );
+
     debugPrint(
       '[API] RESPONSE ${response.statusCode} for GET ${uri.toString()}',
     );
+
+    if (response.statusCode == 401) {
+      debugPrint(
+        '[API] 401 received for GET ${uri.toString()}, refreshing token',
+      );
+
+      bool refreshed = await AuthService.refreshAccessToken();
+
+      if (!refreshed) {
+        throw Exception("Session expired. Please login again.");
+      }
+
+      String? newToken = await TokenStorage.getAccessToken();
+
+      response = await dio.getUri(
+        uri,
+        options: Options(headers: {"Authorization": "Bearer $newToken"}),
+      );
+
+      debugPrint(
+        '[API] RETRY RESPONSE ${response.statusCode} for GET ${uri.toString()}',
+      );
+    }
+
     return response;
   }
 
@@ -27,7 +57,7 @@ class ApiService {
 
   /// ===== GET EVENTS =====
   static Future<List<EventItem>> getEvents() async {
-    final response = await _authorizedGet('/v1/events');
+    final response = await _authorizedGet('/events');
 
     if (response.statusCode != 200) {
       throw Exception(
@@ -55,15 +85,10 @@ class ApiService {
   }
 
   /// ===== GET EVENT MEDIA USING ONLY 2 MOCK APIS =====
-  ///
-  /// [canFetchVideo] — pass `false` for Organisation (has camera:read but NOT
-  /// stream:read). They see images only, per BRD §4.3. Passing false skips the
-  /// /videoplayurl call entirely so no 403 is ever thrown.
   static Future<EventMediaResponse> getEventMedia(
     int eventId,
-    Map<String, dynamic> alertData, {
-    bool canFetchVideo = true,
-  }) async {
+    Map<String, dynamic> alertData,
+  ) async {
     debugPrint('[UI ACTION] View Media clicked for eventId=$eventId');
 
     final tenant = (alertData['tenantName'] ?? 'demo').toString().trim().isEmpty
@@ -100,7 +125,7 @@ class ApiService {
 
     final imageUri =
         Uri.parse(
-          '$baseUrl/v1/netradyne/v1/tenants/$tenant/event/preview/images',
+          '$baseUrl/netradyne/v1/tenants/$tenant/event/preview/images',
         ).replace(
           queryParameters: {
             'startTime': '$timestamp',
@@ -121,10 +146,11 @@ class ApiService {
         .join(',');
 
     final videoUri = Uri.parse(
-      '$baseUrl/v1/netradyne/v1/tenants/$tenant/videoplayurl/${videoIds.isEmpty ? "1" : videoIds}',
+      '$baseUrl/netradyne/v1/tenants/$tenant/videoplayurl/${videoIds.isEmpty ? "1" : videoIds}',
     ).replace(queryParameters: {'validityDuration': '3600'});
 
     final imageResponse = await _authorizedGetUri(imageUri);
+    final videoResponse = await _authorizedGetUri(videoUri);
 
     if (imageResponse.statusCode != 200) {
       throw Exception(
@@ -132,17 +158,10 @@ class ApiService {
       );
     }
 
-    // BRD §4.3 — Organisation has camera:read (images) but NOT stream:read
-    // (video playback). Skip the video fetch entirely for those roles so we
-    // never hit a 403 on /videoplayurl.
-    Response? videoResponse;
-    if (canFetchVideo) {
-      videoResponse = await _authorizedGetUri(videoUri);
-      if (videoResponse.statusCode != 200) {
-        throw Exception(
-          'Failed to fetch video URLs (${videoResponse.statusCode}): ${videoResponse.data}',
-        );
-      }
+    if (videoResponse.statusCode != 200) {
+      throw Exception(
+        'Failed to fetch video URLs (${videoResponse.statusCode}): ${videoResponse.data}',
+      );
     }
 
     final imageData =
@@ -150,11 +169,10 @@ class ApiService {
             as Map<String, dynamic>? ??
         <String, dynamic>{};
 
-    final videoData = videoResponse == null
-        ? <String, dynamic>{}
-        : (videoResponse.data as Map<String, dynamic>)['data']
-                  as Map<String, dynamic>? ??
-              <String, dynamic>{};
+    final videoData =
+        (videoResponse.data as Map<String, dynamic>)['data']
+            as Map<String, dynamic>? ??
+        <String, dynamic>{};
 
     final imageList = (imageData['images'] as List<dynamic>? ?? [])
         .asMap()
