@@ -1,14 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/downloaded_media_model.dart';
 import '../models/event_models.dart';
+import '../../auth/services/auth_service.dart';
 
 class DownloadService {
   static const String _downloadsKey = 'downloaded_media_items';
@@ -60,13 +61,18 @@ class DownloadService {
     required int eventId,
     required MediaItem media,
   }) async {
-    final response = await http.get(Uri.parse(media.url));
+    // Use authenticated Dio — evidence endpoints require Authorization header
+    final dio = AuthService.dio;
+    final dioResponse = await dio.get<List<int>>(
+      media.url,
+      options: Options(responseType: ResponseType.bytes),
+    );
 
-    if (response.statusCode != 200) {
-      throw Exception('Failed to download media (${response.statusCode})');
+    if (dioResponse.statusCode != 200 || dioResponse.data == null) {
+      throw Exception('Failed to download media (${dioResponse.statusCode})');
     }
 
-    final Uint8List bytes = response.bodyBytes;
+    final Uint8List bytes = Uint8List.fromList(dioResponse.data!);
     final downloadDir = await _getDownloadDirectory();
 
     final ext = _extensionFromUrl(media.url, media.type);

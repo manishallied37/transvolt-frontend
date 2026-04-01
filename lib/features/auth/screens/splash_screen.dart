@@ -24,12 +24,15 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _initializeApp() async {
-    await Future.delayed(const Duration(seconds: 2));
-
     try {
-      // Step 1: Check if there are valid session tokens already in storage
-      // (normal case — app was not uninstalled).
-      final bool sessionActive = await AuthState.isLoggedIn();
+      await DeviceService.migrateDeviceIdIfNeeded();
+
+      // Run auth check and minimum splash display time in parallel
+      final results = await Future.wait([
+        AuthState.isLoggedIn(),
+        Future.delayed(const Duration(milliseconds: 800)),
+      ]);
+      final bool sessionActive = results[0] as bool;
 
       if (!mounted) return;
 
@@ -45,7 +48,10 @@ class _SplashScreenState extends State<SplashScreen> {
 
       if (deviceToken != null) {
         final String deviceId = await DeviceService.getDeviceId();
-        final bool restored = await AuthService.deviceLogin(deviceToken, deviceId);
+        final bool restored = await AuthService.deviceLogin(
+          deviceToken,
+          deviceId,
+        );
 
         if (!mounted) return;
 

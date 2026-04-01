@@ -1,63 +1,98 @@
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class DeviceService {
-  static const String deviceRegisteredKey = "device_registered";
-  static const String deviceIdKey = "device_id";
+  static const _secureStorage = FlutterSecureStorage();
 
+  static const String _deviceIdKey = "secure_device_id";
+  static const String _deviceRegisteredKey = "device_registered";
+
+  /// 🔐 Get or create secure device ID
   static Future<String> getDeviceId() async {
-    final prefs = await SharedPreferences.getInstance();
+    String? stored = await _secureStorage.read(key: _deviceIdKey);
 
-    String? storedId = prefs.getString(deviceIdKey);
-
-    if (storedId != null) {
-      return storedId;
+    if (stored != null && stored.isNotEmpty) {
+      return stored;
     }
 
-    final deviceInfo = DeviceInfoPlugin();
+    final deviceId = await _resolveHardwareId();
 
-    String deviceId = "unknown-device";
-
-    if (kIsWeb) {
-      WebBrowserInfo webInfo = await deviceInfo.webBrowserInfo;
-      deviceId = webInfo.userAgent ?? "web-device";
-    } else if (defaultTargetPlatform == TargetPlatform.android) {
-      AndroidDeviceInfo android = await deviceInfo.androidInfo;
-      deviceId = android.id;
-    } else if (defaultTargetPlatform == TargetPlatform.iOS) {
-      IosDeviceInfo ios = await deviceInfo.iosInfo;
-      deviceId = ios.identifierForVendor ?? "ios-device";
-    }
-
-    await prefs.setString(deviceIdKey, deviceId);
+    await _secureStorage.write(key: _deviceIdKey, value: deviceId);
 
     return deviceId;
   }
 
+  /// 🔍 Hardware-based fallback (only used once)
+  static Future<String> _resolveHardwareId() async {
+    final deviceInfo = DeviceInfoPlugin();
+
+    if (kIsWeb) {
+      final webInfo = await deviceInfo.webBrowserInfo;
+      return webInfo.userAgent ?? "web-device";
+    }
+
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      final android = await deviceInfo.androidInfo;
+      return android.id; // ANDROID_ID
+    }
+
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      final ios = await deviceInfo.iosInfo;
+      return ios.identifierForVendor ?? "ios-device";
+    }
+
+    return "unknown-device";
+  }
+
+  /// ✅ Device registration flag (non-sensitive)
   static Future<bool> isDeviceRegistered() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(deviceRegisteredKey) ?? false;
+    return prefs.getBool(_deviceRegisteredKey) ?? false;
   }
 
   static Future<void> registerDevice() async {
     final prefs = await SharedPreferences.getInstance();
 
-    String deviceId = await getDeviceId();
+    // Ensure deviceId exists securely
+    await getDeviceId();
 
-    await prefs.setBool(deviceRegisteredKey, true);
-    await prefs.setString(deviceIdKey, deviceId);
+    await prefs.setBool(_deviceRegisteredKey, true);
   }
 
+  /// 🔐 Always read from secure storage
   static Future<String?> getStoredDeviceId() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(deviceIdKey);
+    return await _secureStorage.read(key: _deviceIdKey);
   }
 
+  /// 🧹 Clear both secure + prefs
   static Future<void> clearDevice() async {
     final prefs = await SharedPreferences.getInstance();
 
-    await prefs.remove(deviceRegisteredKey);
-    await prefs.remove(deviceIdKey);
+    await _secureStorage.delete(key: _deviceIdKey);
+    await prefs.remove(_deviceRegisteredKey);
+  }
+
+  static Future<void> migrateDeviceIdIfNeeded() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // Check secure storage first
+    String? secureId = await _secureStorage.read(key: _deviceIdKey);
+
+    if (secureId != null && secureId.isNotEmpty) {
+      return; // Already migrated
+    }
+
+    // Check old SharedPreferences
+    String? oldId = prefs.getString("device_id");
+
+    if (oldId != null && oldId.isNotEmpty) {
+      // Move to secure storage
+      await _secureStorage.write(key: _deviceIdKey, value: oldId);
+
+      // Clean up insecure storage
+      await prefs.remove("device_id");
+    }
   }
 }

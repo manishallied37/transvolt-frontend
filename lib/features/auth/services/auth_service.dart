@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
@@ -6,11 +7,52 @@ import '../../../../core/constants/app_constants.dart';
 import 'token_storage.dart';
 
 class AuthService {
-  static String baseUrl = dotenv.env['API_URL']!;
+  static String get baseUrl {
+    final url = dotenv.env['API_URL'];
+    assert(url != null && url.isNotEmpty, 'API_URL is not set in .env file');
+    if (url == null || url.isEmpty) {
+      debugPrint(
+        '[FATAL] API_URL is not set in .env. Using localhost fallback.',
+      );
+      return 'http://localhost:5000';
+    }
+    return url;
+  }
+
   static Dio dio = _createDio();
 
-  /// In production, reject any certificate that doesn't match our hostname.
-  /// In debug/test, allow all certificates so local dev servers work.
+  /// 🔒 Refresh lock
+  static bool _refreshing = false;
+  static final List<Completer<bool>> _refreshQueue = [];
+
+  static Future<bool> lockedRefresh() async {
+    if (_refreshing) {
+      final completer = Completer<bool>();
+      _refreshQueue.add(completer);
+      return completer.future;
+    }
+
+    _refreshing = true;
+
+    bool result = false;
+    try {
+      result = await refreshAccessToken();
+    } catch (_) {
+      result = false;
+    }
+
+    _refreshing = false;
+
+    // Notify all waiting requests
+    for (final c in _refreshQueue) {
+      if (!c.isCompleted) c.complete(result);
+    }
+    _refreshQueue.clear();
+
+    return result;
+  }
+
+  /// Dio setup
   static Dio _createDio() {
     final dio = Dio(BaseOptions(baseUrl: baseUrl));
 
@@ -18,12 +60,13 @@ class AuthService {
       final httpClient = HttpClient()
         ..badCertificateCallback =
             (X509Certificate cert, String host, int port) {
-              // Only allow our own API domain
               final allowedHost = Uri.parse(baseUrl).host;
               final isAllowed = host == allowedHost;
+
               if (!isAllowed) {
                 debugPrint('[Security] Rejected certificate for host: $host');
               }
+
               return isAllowed;
             };
 
@@ -37,7 +80,6 @@ class AuthService {
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          // Public auth paths — no token needed
           final publicPaths = [
             AppConstants.endpointLogin,
             AppConstants.endpointSendOtp,
@@ -61,8 +103,6 @@ class AuthService {
         onError: (DioException e, handler) async {
           final path = e.requestOptions.path;
 
-          // Never attempt a token refresh on these paths —
-          // they either don't need auth or are part of the auth flow itself.
           final skipRefreshPaths = [
             AppConstants.endpointRefresh,
             AppConstants.endpointLogout,
@@ -78,16 +118,38 @@ class AuthService {
           final shouldSkip = skipRefreshPaths.any((p) => path.contains(p));
           if (shouldSkip) return handler.next(e);
 
+          // 🔁 Prevent infinite retry
+          if (e.requestOptions.extra['retry'] == true) {
+            return handler.next(e);
+          }
+
           if (e.response?.statusCode == 401) {
-            final refreshed = await AuthService.refreshAccessToken();
+            final refreshed = await lockedRefresh();
 
             if (refreshed) {
               final token = await TokenStorage.getAccessToken();
-              e.requestOptions.headers['Authorization'] = 'Bearer $token';
-              final response = await dio.fetch(e.requestOptions);
-              return handler.resolve(response);
+              final opts = e.requestOptions;
+
+              // mark request as retried
+              opts.extra['retry'] = true;
+
+              // update token
+              opts.headers['Authorization'] = 'Bearer $token';
+
+              try {
+                final response = await dio.request(
+                  opts.path,
+                  data: opts.data,
+                  queryParameters: opts.queryParameters,
+                  options: Options(method: opts.method, headers: opts.headers),
+                );
+
+                return handler.resolve(response);
+              } catch (err) {
+                return handler.next(err is DioException ? err : e);
+              }
             } else {
-              await TokenStorage.clearTokens();
+              await TokenStorage.clearAll(); // 🔥 important fix
             }
           }
 
@@ -96,6 +158,8 @@ class AuthService {
       ),
     );
   }
+
+  /// ---------------- AUTH APIs ----------------
 
   static Future<Map<String, dynamic>?> login(
     String login,
@@ -107,16 +171,19 @@ class AuthService {
         AppConstants.endpointLogin,
         data: {'login': login, 'password': password, 'deviceId': deviceId},
       );
-      if (response.statusCode == 200) return response.data as Map<String, dynamic>;
+
+      if (response.statusCode == 200) {
+        return response.data as Map<String, dynamic>;
+      }
       return null;
     } on DioException catch (e) {
-      debugPrint('Login STATUS: \${e.response?.statusCode}');
-      debugPrint('Login DATA: \${e.response?.data}');
-      // Rethrow with the server's message so the UI can show the right error
-      // (e.g. "Account temporarily locked" vs "Invalid credentials")
+      debugPrint('Login STATUS: ${e.response?.statusCode}');
+      debugPrint('Login DATA: ${e.response?.data}');
+
       final serverMessage = e.response?.data is Map
           ? (e.response!.data['message'] as String?)
           : null;
+
       throw Exception(serverMessage ?? 'Login failed. Please try again.');
     }
   }
@@ -133,12 +200,16 @@ class AuthService {
 
       if (response.statusCode == 200) {
         final data = response.data;
+
         await TokenStorage.saveAccessToken(data['accessToken']);
+
         if (data['refreshToken'] != null) {
           await TokenStorage.saveRefreshToken(data['refreshToken']);
         }
+
         return true;
       }
+
       return false;
     } catch (e) {
       debugPrint('Refresh token error: $e');
@@ -152,14 +223,22 @@ class AuthService {
         AppConstants.endpointSendOtp,
         data: {'identifier': identifier, 'method': method},
       );
-      return response.statusCode == 200;
-    } catch (e) {
-      debugPrint('Send OTP error: $e');
-      return false;
+
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        return false;
+      }
+    } on DioException catch (e) {
+      final msg = e.response?.data is Map
+          ? (e.response!.data['message'] as String? ?? 'Failed to send OTP')
+          : 'Failed to send OTP';
+
+      throw Exception(msg);
     }
   }
 
-  static Future<bool> verifyOtp(
+  static Future<Map<String, dynamic>> verifyOtp(
     String identifier,
     String otp,
     String method,
@@ -169,10 +248,15 @@ class AuthService {
         AppConstants.endpointVerifyOtp,
         data: {'identifier': identifier, 'otp': otp, 'method': method},
       );
-      return response.statusCode == 200;
+
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        throw Exception("OTP verification failed");
+      }
     } catch (e) {
       debugPrint('Verify OTP error: $e');
-      return false;
+      throw Exception("Invalid OTP");
     }
   }
 
@@ -180,6 +264,7 @@ class AuthService {
     String identifier,
     String password,
     String method,
+    String resetToken,
   ) async {
     try {
       final response = await dio.post(
@@ -188,8 +273,10 @@ class AuthService {
           'identifier': identifier,
           'password': password,
           'method': method,
+          'resetToken': resetToken,
         },
       );
+
       return response.statusCode == 200;
     } catch (e) {
       debugPrint('Reset password error: $e');
@@ -210,34 +297,27 @@ class AuthService {
 
       if (response.statusCode == 200) {
         final data = response.data;
+
         await TokenStorage.saveAccessToken(data['tokens']['accessToken']);
         await TokenStorage.saveRefreshToken(data['tokens']['refreshToken']);
 
-        // Save the persistent device token so the app can restore the
-        // session silently after reinstall (no OTP needed next time).
         if (data['deviceToken'] != null) {
           await TokenStorage.saveDeviceToken(data['deviceToken']);
         }
 
         return true;
       }
+
       return false;
-    } catch (e) {
-      if (e is DioException) {
-        debugPrint('Verify login OTP server response: ${e.response?.data}');
-      }
-      debugPrint('Verify login OTP error: $e');
-      return false;
+    } on DioException catch (e) {
+      final msg = e.response?.data is Map
+          ? (e.response!.data['message'] as String? ??
+                'OTP verification failed')
+          : 'OTP verification failed';
+      throw Exception(msg);
     }
   }
 
-  /// Called on app startup when a saved [deviceToken] is found in secure storage.
-  /// If the token is still valid (not expired / not revoked), the backend
-  /// issues a fresh session — no password or OTP required.
-  ///
-  /// Returns [true] and saves new tokens on success.
-  /// Returns [false] if the token has expired or the device is no longer trusted,
-  /// so the caller should redirect to the normal login screen.
   static Future<bool> deviceLogin(String deviceToken, String deviceId) async {
     try {
       final response = await dio.post(
@@ -247,16 +327,17 @@ class AuthService {
 
       if (response.statusCode == 200) {
         final data = response.data;
+
         await TokenStorage.saveAccessToken(data['tokens']['accessToken']);
         await TokenStorage.saveRefreshToken(data['tokens']['refreshToken']);
 
-        // Backend rotates the device token on every use — always save the new one.
         if (data['newDeviceToken'] != null) {
           await TokenStorage.saveDeviceToken(data['newDeviceToken']);
         }
 
         return true;
       }
+
       return false;
     } catch (e) {
       debugPrint('Device login error: $e');
@@ -268,8 +349,7 @@ class AuthService {
     try {
       await dio.post(AppConstants.endpointLogout);
     } catch (_) {}
-    // clearAll removes access, refresh, AND device token so reinstalling
-    // the app won't bypass login after an explicit logout.
+
     await TokenStorage.clearAll();
   }
 
@@ -277,6 +357,7 @@ class AuthService {
     try {
       await dio.post(AppConstants.endpointLogoutAll);
     } catch (_) {}
+
     await TokenStorage.clearAll();
   }
 }
