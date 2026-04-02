@@ -87,7 +87,6 @@ class _StreamScreenState extends State<StreamScreen> {
   String? _streamStatus;
   Timer? _streamExpiryTimer;
   Timer? _countdownTimer;
-  String? _activeStreamVehicleKey;
   DateTime? _streamExpiryTime;
   int _remainingSeconds = 0;
   bool _hasPlaybackStarted = false;
@@ -139,8 +138,16 @@ class _StreamScreenState extends State<StreamScreen> {
       final args = _pendingLaunchArgs;
 
       if (args != null && args.isFullyResolved) {
-        final label = _pickFirstNonEmpty([args.vehicleNumber, args.vin, 'Vehicle']);
-        final key = _pickFirstNonEmpty([args.vehicleNumber, args.vin, args.licensePlateNumber]);
+        final label = _pickFirstNonEmpty([
+          args.vehicleNumber,
+          args.vin,
+          'Vehicle',
+        ]);
+        final key = _pickFirstNonEmpty([
+          args.vehicleNumber,
+          args.vin,
+          args.licensePlateNumber,
+        ]);
 
         final syntheticVehicle = _VehicleOption(
           key: key,
@@ -271,10 +278,20 @@ class _StreamScreenState extends State<StreamScreen> {
 
     int score(_VehicleOption option) {
       var total = 0;
-      if (vehicleNumber.isNotEmpty && _normalize(option.vehicleNumber) == vehicleNumber) total += 100;
-      if (vin.isNotEmpty && _normalize(option.vin) == vin) total += 90;
-      if (licensePlate.isNotEmpty && _normalize(option.licensePlateNumber) == licensePlate) total += 80;
-      if (cameraId.isNotEmpty && _normalize(option.cameraId) == cameraId) total += 70;
+      if (vehicleNumber.isNotEmpty &&
+          _normalize(option.vehicleNumber) == vehicleNumber) {
+        total += 100;
+      }
+      if (vin.isNotEmpty && _normalize(option.vin) == vin) {
+        total += 90;
+      }
+      if (licensePlate.isNotEmpty &&
+          _normalize(option.licensePlateNumber) == licensePlate) {
+        total += 80;
+      }
+      if (cameraId.isNotEmpty && _normalize(option.cameraId) == cameraId) {
+        total += 70;
+      }
       return total;
     }
 
@@ -293,8 +310,9 @@ class _StreamScreenState extends State<StreamScreen> {
   void _setSearchTextSilently(String value) {
     _searchController.removeListener(_applySearchFilter);
     _searchController.text = value;
-    _searchController.selection =
-        TextSelection.collapsed(offset: _searchController.text.length);
+    _searchController.selection = TextSelection.collapsed(
+      offset: _searchController.text.length,
+    );
     _searchController.addListener(_applySearchFilter);
   }
 
@@ -307,8 +325,9 @@ class _StreamScreenState extends State<StreamScreen> {
         _filteredOptions = List<_VehicleOption>.from(_allVehicleOptions);
         if (_selectedVehicle != null &&
             !_allVehicleOptions.any((o) => o.key == _selectedVehicle!.key)) {
-          _selectedVehicle =
-              _allVehicleOptions.isNotEmpty ? _allVehicleOptions.first : null;
+          _selectedVehicle = _allVehicleOptions.isNotEmpty
+              ? _allVehicleOptions.first
+              : null;
         }
       });
       return;
@@ -316,8 +335,12 @@ class _StreamScreenState extends State<StreamScreen> {
 
     final filtered = _allVehicleOptions.where((option) {
       final haystack = [
-        option.label, option.vehicleNumber, option.driverName,
-        option.cameraId, option.vin, option.licensePlateNumber,
+        option.label,
+        option.vehicleNumber,
+        option.driverName,
+        option.cameraId,
+        option.vin,
+        option.licensePlateNumber,
         option.latestEventType,
       ].join(' ').toLowerCase();
       return haystack.contains(query);
@@ -329,7 +352,8 @@ class _StreamScreenState extends State<StreamScreen> {
         _selectedVehicle = null;
         return;
       }
-      final hasValidSelection = _selectedVehicle != null &&
+      final hasValidSelection =
+          _selectedVehicle != null &&
           filtered.any((item) => item.key == _selectedVehicle!.key);
       if (!hasValidSelection) {
         _selectedVehicle = filtered.first;
@@ -361,7 +385,6 @@ class _StreamScreenState extends State<StreamScreen> {
       _countdownTimer?.cancel();
       setState(() {
         _activeStream = null;
-        _activeStreamVehicleKey = null;
         _streamStatus = null;
         _streamExpiryTime = null;
         _streamExpired = true;
@@ -401,7 +424,8 @@ class _StreamScreenState extends State<StreamScreen> {
         cameraPositions: const [0, 1],
         vehicle: {
           if (selected.vin.isNotEmpty) 'vin': selected.vin,
-          if (selected.vehicleNumber.isNotEmpty) 'vehicleNumber': selected.vehicleNumber,
+          if (selected.vehicleNumber.isNotEmpty)
+            'vehicleNumber': selected.vehicleNumber,
           if (selected.licensePlateNumber.isNotEmpty)
             'licensePlateNumber': selected.licensePlateNumber,
         },
@@ -409,7 +433,8 @@ class _StreamScreenState extends State<StreamScreen> {
       );
 
       final data =
-          (payload['data'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
+          (payload['data'] as Map?)?.cast<String, dynamic>() ??
+          <String, dynamic>{};
       final urls =
           (data['liveStreamingHlsUrls'] as List<dynamic>? ?? <dynamic>[])
               .map((item) => Map<String, dynamic>.from(item as Map))
@@ -423,7 +448,10 @@ class _StreamScreenState extends State<StreamScreen> {
       if (playable.isEmpty) {
         final message = urls
             .map((item) => _text(item['errorMessage']))
-            .firstWhere((v) => v.isNotEmpty, orElse: () => 'Livestream unavailable.');
+            .firstWhere(
+              (v) => v.isNotEmpty,
+              orElse: () => 'Livestream unavailable.',
+            );
         throw Exception(message);
       }
 
@@ -439,7 +467,6 @@ class _StreamScreenState extends State<StreamScreen> {
           mimeType: 'application/x-mpegURL',
           source: 'livestream',
         );
-        _activeStreamVehicleKey = selected.key;
         _streamStatus = 'Live stream ready';
         _streamExpiryTime = null;
         _streamExpired = false;
@@ -451,7 +478,6 @@ class _StreamScreenState extends State<StreamScreen> {
       _countdownTimer?.cancel();
       setState(() {
         _activeStream = null;
-        _activeStreamVehicleKey = null;
         _streamStatus = msg;
         _streamExpiryTime = null;
         _streamExpired = false;
@@ -459,7 +485,9 @@ class _StreamScreenState extends State<StreamScreen> {
         _hasPlaybackStarted = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(msg)));
       }
     } finally {
       if (mounted) setState(() => _isStartingStream = false);
@@ -486,7 +514,10 @@ class _StreamScreenState extends State<StreamScreen> {
             children: [
               Text(_errorMessage!, textAlign: TextAlign.center),
               const SizedBox(height: 12),
-              ElevatedButton(onPressed: _loadVehicles, child: const Text('Retry')),
+              ElevatedButton(
+                onPressed: _loadVehicles,
+                child: const Text('Retry'),
+              ),
             ],
           ),
         ),
@@ -513,35 +544,45 @@ class _StreamScreenState extends State<StreamScreen> {
                     onPressed: () => _searchController.clear(),
                     icon: const Icon(Icons.close),
                   ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 12,
+            ),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
           ),
         ),
         const SizedBox(height: 10),
         DropdownButtonFormField<String>(
-          value: _filteredOptions.any((item) => item.key == _selectedVehicle?.key)
+          initialValue:
+              _filteredOptions.any((item) => item.key == _selectedVehicle?.key)
               ? _selectedVehicle?.key
               : null,
           isExpanded: true,
           decoration: InputDecoration(
             labelText: 'Vehicle',
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 10,
+            ),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
           ),
           items: _filteredOptions
-              .map((option) => DropdownMenuItem<String>(
-                    value: option.key,
-                    child: Text(
-                      '${option.label} • ${option.driverName.isEmpty ? 'No driver' : option.driverName}',
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ))
+              .map(
+                (option) => DropdownMenuItem<String>(
+                  value: option.key,
+                  child: Text(
+                    '${option.label} • ${option.driverName.isEmpty ? 'No driver' : option.driverName}',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              )
               .toList(),
           onChanged: (value) {
             if (value == null) return;
             final match = _allVehicleOptions.firstWhere(
               (item) => item.key == value,
-              orElse: () => _vehicleOptions.firstWhere((item) => item.key == value),
+              orElse: () =>
+                  _vehicleOptions.firstWhere((item) => item.key == value),
             );
             setState(() {
               _selectedVehicle = match;
@@ -579,8 +620,11 @@ class _StreamScreenState extends State<StreamScreen> {
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
             child: Row(
               children: [
-                Icon(Icons.live_tv_outlined,
-                    color: Theme.of(context).colorScheme.primary, size: 20),
+                Icon(
+                  Icons.live_tv_outlined,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -598,7 +642,8 @@ class _StreamScreenState extends State<StreamScreen> {
             VideoPlayerCard(
               media: _activeStream!,
               isLivestream: true,
-              onFullscreenChanged: (isFs) => setState(() => _isFullscreen = isFs),
+              onFullscreenChanged: (isFs) =>
+                  setState(() => _isFullscreen = isFs),
               onPlaybackStarted: _startStreamExpiryCountdown,
             ),
             if (_activeStream != null)
@@ -617,8 +662,8 @@ class _StreamScreenState extends State<StreamScreen> {
                     Text(
                       _hasPlaybackStarted
                           ? (_remainingSeconds > 0
-                              ? 'Stream expires in ${_remainingSeconds}s'
-                              : 'Expiring...')
+                                ? 'Stream expires in ${_remainingSeconds}s'
+                                : 'Expiring...')
                           : 'Timer starts when playback begins',
                       style: TextStyle(
                         fontSize: 12,
@@ -656,8 +701,10 @@ class _StreamScreenState extends State<StreamScreen> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: _streamExpired
-                          ? Theme.of(context).colorScheme.primary.withOpacity(0.12)
-                          : Colors.white.withOpacity(0.72),
+                          ? Theme.of(
+                              context,
+                            ).colorScheme.primary.withValues(alpha: 0.12)
+                          : Colors.white.withValues(alpha: 0.72),
                     ),
                     child: Icon(
                       _streamExpired
@@ -721,15 +768,13 @@ class _StreamScreenState extends State<StreamScreen> {
                               color: Colors.white,
                             ),
                           )
-                        : Icon(
-                            _streamExpired ? Icons.replay : Icons.live_tv,
-                          ),
+                        : Icon(_streamExpired ? Icons.replay : Icons.live_tv),
                     label: Text(
                       _isStartingStream
                           ? 'Starting stream...'
                           : _streamExpired
-                              ? 'Request another minute'
-                              : 'Play livestream',
+                          ? 'Request another minute'
+                          : 'Play livestream',
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 15,
@@ -740,8 +785,11 @@ class _StreamScreenState extends State<StreamScreen> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.info_outline,
-                          size: 14, color: Colors.orange.shade700),
+                      Icon(
+                        Icons.info_outline,
+                        size: 14,
+                        color: Colors.orange.shade700,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         'No camera ID available for this vehicle.',
@@ -761,7 +809,9 @@ class _StreamScreenState extends State<StreamScreen> {
                   const SizedBox(height: 10),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10),
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.red.shade50,
                       borderRadius: BorderRadius.circular(10),
@@ -769,8 +819,11 @@ class _StreamScreenState extends State<StreamScreen> {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.error_outline,
-                            size: 16, color: Colors.red.shade700),
+                        Icon(
+                          Icons.error_outline,
+                          size: 16,
+                          color: Colors.red.shade700,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -791,8 +844,11 @@ class _StreamScreenState extends State<StreamScreen> {
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      Icon(Icons.check_circle_outline,
-                          size: 15, color: Colors.green.shade700),
+                      Icon(
+                        Icons.check_circle_outline,
+                        size: 15,
+                        color: Colors.green.shade700,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         _streamStatus!,
@@ -826,7 +882,9 @@ class _StreamScreenState extends State<StreamScreen> {
     return '';
   }
 
-  static List<_VehicleOption> _buildOptions(List<Map<String, dynamic>> vehicles) {
+  static List<_VehicleOption> _buildOptions(
+    List<Map<String, dynamic>> vehicles,
+  ) {
     return vehicles.map((v) {
       return _VehicleOption(
         key: v['vehicleNumber'] ?? v['vin'] ?? v['licensePlateNumber'] ?? '',
@@ -847,15 +905,6 @@ class _StreamScreenState extends State<StreamScreen> {
         latestLocation: (v['latestLocation'] ?? '').toString(),
       );
     }).toList();
-  }
-
-  static String _formatLocation(Map<dynamic, dynamic> location) {
-    final parts = <String>[
-      _text(location['address']),
-      _text(location['city']),
-      _text(location['state']),
-    ].where((v) => v.isNotEmpty).toList();
-    return parts.join(', ');
   }
 }
 
@@ -887,10 +936,9 @@ class _VehicleDetailsCard extends StatelessWidget {
                     vehicle.label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleLarge
-                        ?.copyWith(fontWeight: FontWeight.w700),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -918,29 +966,90 @@ class _CompactDetailGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Row(children: [
-          Expanded(child: _DetailTile(label: 'Driver', value: vehicle.driverName.isEmpty ? 'Unassigned' : vehicle.driverName)),
-          const SizedBox(width: 12),
-          Expanded(child: _DetailTile(label: 'Camera ID', value: vehicle.cameraId.isEmpty ? 'Unavailable' : vehicle.cameraId)),
-        ]),
+        Row(
+          children: [
+            Expanded(
+              child: _DetailTile(
+                label: 'Driver',
+                value: vehicle.driverName.isEmpty
+                    ? 'Unassigned'
+                    : vehicle.driverName,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _DetailTile(
+                label: 'Camera ID',
+                value: vehicle.cameraId.isEmpty
+                    ? 'Unavailable'
+                    : vehicle.cameraId,
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 10),
-        Row(children: [
-          Expanded(child: _DetailTile(label: 'VIN', value: vehicle.vin.isEmpty ? 'Unavailable' : vehicle.vin)),
-          const SizedBox(width: 12),
-          Expanded(child: _DetailTile(label: 'Status', value: vehicle.latestStatus.isEmpty ? 'Unavailable' : vehicle.latestStatus)),
-        ]),
+        Row(
+          children: [
+            Expanded(
+              child: _DetailTile(
+                label: 'VIN',
+                value: vehicle.vin.isEmpty ? 'Unavailable' : vehicle.vin,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _DetailTile(
+                label: 'Status',
+                value: vehicle.latestStatus.isEmpty
+                    ? 'Unavailable'
+                    : vehicle.latestStatus,
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 10),
-        Row(children: [
-          Expanded(child: _DetailTile(label: 'Latest event', value: vehicle.latestEventType.isEmpty ? 'Unavailable' : vehicle.latestEventType)),
-          const SizedBox(width: 12),
-          Expanded(child: _DetailTile(label: 'Time', value: formatter.format(vehicle.latestTimestamp))),
-        ]),
+        Row(
+          children: [
+            Expanded(
+              child: _DetailTile(
+                label: 'Latest event',
+                value: vehicle.latestEventType.isEmpty
+                    ? 'Unavailable'
+                    : vehicle.latestEventType,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _DetailTile(
+                label: 'Time',
+                value: formatter.format(vehicle.latestTimestamp),
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 10),
-        Row(children: [
-          Expanded(child: _DetailTile(label: 'License plate', value: vehicle.licensePlateNumber.isEmpty ? 'Unavailable' : vehicle.licensePlateNumber)),
-          const SizedBox(width: 12),
-          Expanded(child: _DetailTile(label: 'Location', value: vehicle.latestLocation.isEmpty ? 'Unavailable' : vehicle.latestLocation, maxLines: 2)),
-        ]),
+        Row(
+          children: [
+            Expanded(
+              child: _DetailTile(
+                label: 'License plate',
+                value: vehicle.licensePlateNumber.isEmpty
+                    ? 'Unavailable'
+                    : vehicle.licensePlateNumber,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _DetailTile(
+                label: 'Location',
+                value: vehicle.latestLocation.isEmpty
+                    ? 'Unavailable'
+                    : vehicle.latestLocation,
+                maxLines: 2,
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -950,7 +1059,11 @@ class _CompactDetailGrid extends StatelessWidget {
 // _DetailTile
 // ---------------------------------------------------------------------------
 class _DetailTile extends StatelessWidget {
-  const _DetailTile({required this.label, required this.value, this.maxLines = 2});
+  const _DetailTile({
+    required this.label,
+    required this.value,
+    this.maxLines = 2,
+  });
   final String label;
   final String value;
   final int maxLines;
@@ -960,19 +1073,23 @@ class _DetailTile extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: Theme.of(context)
-                .textTheme
-                .labelMedium
-                ?.copyWith(color: Colors.grey.shade600, fontSize: 12)),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            color: Colors.grey.shade600,
+            fontSize: 12,
+          ),
+        ),
         const SizedBox(height: 3),
-        Text(value,
-            maxLines: maxLines,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context)
-                .textTheme
-                .bodyMedium
-                ?.copyWith(fontWeight: FontWeight.w600, height: 1.25)),
+        Text(
+          value,
+          maxLines: maxLines,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            height: 1.25,
+          ),
+        ),
       ],
     );
   }
@@ -1002,11 +1119,15 @@ class _SeverityChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
       ),
       child: Text(
         label.isEmpty ? 'UNKNOWN' : label,
-        style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 12),
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w700,
+          fontSize: 12,
+        ),
       ),
     );
   }

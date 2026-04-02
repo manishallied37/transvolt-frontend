@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
@@ -13,7 +12,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/downloaded_media_model.dart';
 import '../models/event_models.dart';
-import '../../auth/services/auth_service.dart';
 
 class DownloadService {
   static const String _downloadsKey = 'downloaded_media_items';
@@ -135,8 +133,8 @@ class DownloadService {
         throw Exception('Failed to save file to Downloads folder');
       }
 
-      final savedUri = saved.uri?.toString() ?? '';
-      final savedName = saved.name ?? '';
+      final savedUri = saved.uri.toString();
+      final savedName = saved.name;
 
       if (savedUri.isEmpty && savedName.isEmpty) {
         throw Exception('Failed to save file to Downloads folder');

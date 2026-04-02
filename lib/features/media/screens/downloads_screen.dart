@@ -37,8 +37,7 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
   }
 
   Future<void> _deleteSelected(List<DownloadedMediaItem> items) async {
-    final selectedItems =
-        _selectedIndices.map((i) => items[i]).toList();
+    final selectedItems = _selectedIndices.map((i) => items[i]).toList();
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -74,8 +73,9 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
       await DownloadService.openDownload(item);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
@@ -197,17 +197,15 @@ class _DownloadsScreenState extends State<DownloadsScreen> {
                 child: ListView.separated(
                   padding: const EdgeInsets.all(16),
                   itemCount: items.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final item = items[index];
                     final isSelected = _selectedIndices.contains(index);
 
                     return Card(
                       color: isSelected
-                          ? Theme.of(context)
-                              .colorScheme
-                              .primaryContainer
-                              .withOpacity(0.4)
+                          ? Theme.of(context).colorScheme.primaryContainer
+                                .withValues(alpha: 0.4)
                           : null,
                       child: ListTile(
                         contentPadding: const EdgeInsets.all(12),

@@ -149,7 +149,9 @@ class _VideoPlayerCardState extends State<VideoPlayerCard> {
           return;
         }
 
-        if (widget.isLivestream && value.isPlaying && !_didNotifyPlaybackStarted) {
+        if (widget.isLivestream &&
+            value.isPlaying &&
+            !_didNotifyPlaybackStarted) {
           _didNotifyPlaybackStarted = true;
           widget.onPlaybackStarted?.call();
         }
@@ -349,14 +351,14 @@ class _VideoPlayerCardState extends State<VideoPlayerCard> {
         reverseTransitionDuration: const Duration(milliseconds: 300),
         pageBuilder: (context, animation, secondaryAnimation) =>
             FullscreenVideoPlayerScreen(
-          controller: controller,
-          title: widget.media.title,
-          initialSpeed: _playbackSpeed,
-          initialVolume: _volume,
-          onDownload: widget.onDownload,
-          isDownloading: widget.isDownloading,
-          isLivestream: widget.isLivestream,
-        ),
+              controller: controller,
+              title: widget.media.title,
+              initialSpeed: _playbackSpeed,
+              initialVolume: _volume,
+              onDownload: widget.onDownload,
+              isDownloading: widget.isDownloading,
+              isLivestream: widget.isLivestream,
+            ),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           final curved = CurvedAnimation(
             parent: animation,
@@ -550,7 +552,13 @@ class _VideoPlayerCardState extends State<VideoPlayerCard> {
                     children: [
                       Icon(Icons.replay_10, color: Colors.white, size: 36),
                       SizedBox(height: 4),
-                      Text('10s', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      Text(
+                        '10s',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -568,7 +576,13 @@ class _VideoPlayerCardState extends State<VideoPlayerCard> {
                     children: [
                       Icon(Icons.forward_10, color: Colors.white, size: 36),
                       SizedBox(height: 4),
-                      Text('10s', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      Text(
+                        '10s',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -610,7 +624,7 @@ class _VideoPlayerCardState extends State<VideoPlayerCard> {
                 child: _isInitializing
                     ? const CircularProgressIndicator(color: Color(0xFF534AB7))
                     : Material(
-                        color: Colors.white.withOpacity(0.95),
+                        color: Colors.white.withValues(alpha: 0.95),
                         shape: const CircleBorder(),
                         child: InkWell(
                           customBorder: const CircleBorder(),
@@ -618,7 +632,11 @@ class _VideoPlayerCardState extends State<VideoPlayerCard> {
                           child: const SizedBox(
                             width: 72,
                             height: 72,
-                            child: Icon(Icons.play_arrow, size: 38, color: Color(0xFF534AB7)),
+                            child: Icon(
+                              Icons.play_arrow,
+                              size: 38,
+                              color: Color(0xFF534AB7),
+                            ),
                           ),
                         ),
                       ),
@@ -626,33 +644,53 @@ class _VideoPlayerCardState extends State<VideoPlayerCard> {
             ),
             if (!widget.isLivestream)
               Positioned(
-                top: 8, right: 8,
+                top: 8,
+                right: 8,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _OverlayCircleButton(
-                      onPressed: widget.isDownloading ? null : widget.onDownload,
+                      onPressed: widget.isDownloading
+                          ? null
+                          : widget.onDownload,
                       child: widget.isDownloading
                           ? const SizedBox(
-                              width: 16, height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
                             )
-                          : const Icon(Icons.download, color: Colors.white, size: 18),
+                          : const Icon(
+                              Icons.download,
+                              color: Colors.white,
+                              size: 18,
+                            ),
                     ),
                     const SizedBox(width: 8),
                     _OverlayCircleButton(
                       onPressed: _openFullscreen,
-                      child: const Icon(Icons.fullscreen, color: Colors.white, size: 18),
+                      child: const Icon(
+                        Icons.fullscreen,
+                        color: Colors.white,
+                        size: 18,
+                      ),
                     ),
                   ],
                 ),
               ),
             if (widget.isLivestream)
               Positioned(
-                top: 8, right: 8,
+                top: 8,
+                right: 8,
                 child: _OverlayCircleButton(
                   onPressed: _openFullscreen,
-                  child: const Icon(Icons.fullscreen, color: Colors.white, size: 18),
+                  child: const Icon(
+                    Icons.fullscreen,
+                    color: Colors.white,
+                    size: 18,
+                  ),
                 ),
               ),
           ],
@@ -700,7 +738,9 @@ class _VideoPlayerCardState extends State<VideoPlayerCard> {
 
     final controller = _controller!;
     final value = controller.value;
-    final position = value.position > value.duration ? value.duration : value.position;
+    final position = value.position > value.duration
+        ? value.duration
+        : value.position;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -731,7 +771,9 @@ class _VideoPlayerCardState extends State<VideoPlayerCard> {
                   // Gradient for live bottom readability
                   if (widget.isLivestream)
                     Positioned(
-                      left: 0, right: 0, bottom: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
                       child: Container(
                         height: 80,
                         decoration: const BoxDecoration(
@@ -775,9 +817,11 @@ class _VideoPlayerCardState extends State<VideoPlayerCard> {
                                 onPressed: _togglePlayPause,
                                 iconSize: 58,
                                 color: Colors.white,
-                                icon: Icon(value.isPlaying
-                                    ? Icons.pause_circle_filled
-                                    : Icons.play_circle_filled),
+                                icon: Icon(
+                                  value.isPlaying
+                                      ? Icons.pause_circle_filled
+                                      : Icons.play_circle_filled,
+                                ),
                               ),
                               const SizedBox(width: 12),
                               _InlineControlButton(
@@ -793,7 +837,8 @@ class _VideoPlayerCardState extends State<VideoPlayerCard> {
                   // VOD: top-right download + fullscreen
                   if (!widget.isLivestream)
                     Positioned(
-                      top: 8, right: 8,
+                      top: 8,
+                      right: 8,
                       child: AnimatedOpacity(
                         opacity: _showControls ? 1 : 0,
                         duration: const Duration(milliseconds: 200),
@@ -801,18 +846,32 @@ class _VideoPlayerCardState extends State<VideoPlayerCard> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             _OverlayCircleButton(
-                              onPressed: widget.isDownloading ? null : widget.onDownload,
+                              onPressed: widget.isDownloading
+                                  ? null
+                                  : widget.onDownload,
                               child: widget.isDownloading
                                   ? const SizedBox(
-                                      width: 16, height: 16,
-                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
                                     )
-                                  : const Icon(Icons.download, color: Colors.white, size: 18),
+                                  : const Icon(
+                                      Icons.download,
+                                      color: Colors.white,
+                                      size: 18,
+                                    ),
                             ),
                             const SizedBox(width: 8),
                             _OverlayCircleButton(
                               onPressed: _openFullscreen,
-                              child: const Icon(Icons.fullscreen, color: Colors.white, size: 18),
+                              child: const Icon(
+                                Icons.fullscreen,
+                                color: Colors.white,
+                                size: 18,
+                              ),
                             ),
                           ],
                         ),
@@ -822,7 +881,9 @@ class _VideoPlayerCardState extends State<VideoPlayerCard> {
                   // Live: bottom bar
                   if (widget.isLivestream)
                     Positioned(
-                      left: 0, right: 0, bottom: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
                       child: AnimatedOpacity(
                         opacity: _showControls ? 1 : 0,
                         duration: const Duration(milliseconds: 200),
@@ -878,7 +939,10 @@ class _VideoPlayerCardState extends State<VideoPlayerCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(widget.media.title, style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              widget.media.title,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 12),
             _buildInlinePlayer(),
           ],
@@ -920,11 +984,15 @@ class _PulsingDotState extends State<_PulsingDot>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _anim,
-      builder: (_, __) => Opacity(
+      builder: (_, _) => Opacity(
         opacity: _anim.value,
         child: Container(
-          width: 7, height: 7,
-          decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+          width: 7,
+          height: 7,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+          ),
         ),
       ),
     );
@@ -967,7 +1035,6 @@ class _FullscreenVideoPlayerScreenState
   Timer? _hideControlsTimer;
   Timer? _liveElapsedTimer;
   Duration _liveElapsed = Duration.zero;
-  bool _didNotifyPlaybackStarted = false;
 
   // Seek ripple
   int? _seekRipple;
@@ -1146,7 +1213,8 @@ class _FullscreenVideoPlayerScreenState
   }
 
   Widget _buildSeekBar() {
-    final durationMs = widget.controller.value.duration.inMilliseconds.toDouble();
+    final durationMs = widget.controller.value.duration.inMilliseconds
+        .toDouble();
     final positionMs = widget.controller.value.position.inMilliseconds
         .clamp(0, widget.controller.value.duration.inMilliseconds)
         .toDouble();
@@ -1228,7 +1296,14 @@ class _FullscreenVideoPlayerScreenState
                     children: [
                       Icon(Icons.replay_10, color: Colors.white, size: 48),
                       SizedBox(height: 6),
-                      Text('10s', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text(
+                        '10s',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -1246,7 +1321,14 @@ class _FullscreenVideoPlayerScreenState
                     children: [
                       Icon(Icons.forward_10, color: Colors.white, size: 48),
                       SizedBox(height: 6),
-                      Text('10s', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text(
+                        '10s',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -1262,7 +1344,9 @@ class _FullscreenVideoPlayerScreenState
   @override
   Widget build(BuildContext context) {
     final value = widget.controller.value;
-    final position = value.position > value.duration ? value.duration : value.position;
+    final position = value.position > value.duration
+        ? value.duration
+        : value.position;
     final aspectRatio = widget.isLivestream
         ? 16 / 9
         : (value.aspectRatio == 0 ? 16 / 9 : value.aspectRatio);
@@ -1300,7 +1384,9 @@ class _FullscreenVideoPlayerScreenState
               // Bottom gradient (live)
               if (widget.isLivestream)
                 Positioned(
-                  left: 0, right: 0, bottom: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
                   child: Container(
                     height: 120,
                     decoration: const BoxDecoration(
@@ -1329,13 +1415,18 @@ class _FullscreenVideoPlayerScreenState
 
               // Top bar
               Positioned(
-                top: 0, left: 0, right: 0,
+                top: 0,
+                left: 0,
+                right: 0,
                 child: AnimatedOpacity(
                   opacity: _showControls ? 1 : 0,
                   duration: const Duration(milliseconds: 200),
                   child: SafeArea(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
                       child: Row(
                         children: [
                           IconButton(
@@ -1345,7 +1436,10 @@ class _FullscreenVideoPlayerScreenState
                               if (!mounted) return;
                               navigator.pop();
                             },
-                            icon: const Icon(Icons.arrow_back, color: Colors.white),
+                            icon: const Icon(
+                              Icons.arrow_back,
+                              color: Colors.white,
+                            ),
                           ),
                           Expanded(
                             child: Text(
@@ -1353,18 +1447,30 @@ class _FullscreenVideoPlayerScreenState
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                  color: Colors.white, fontSize: 18, fontWeight: FontWeight.w500),
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
                           if (!widget.isLivestream)
                             IconButton(
-                              onPressed: widget.isDownloading ? null : widget.onDownload,
+                              onPressed: widget.isDownloading
+                                  ? null
+                                  : widget.onDownload,
                               icon: widget.isDownloading
                                   ? const SizedBox(
-                                      width: 18, height: 18,
-                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
                                     )
-                                  : const Icon(Icons.download, color: Colors.white),
+                                  : const Icon(
+                                      Icons.download,
+                                      color: Colors.white,
+                                    ),
                             ),
                         ],
                       ),
@@ -1387,7 +1493,8 @@ class _FullscreenVideoPlayerScreenState
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             _FullscreenControlButton(
-                              icon: Icons.replay_10, size: 42,
+                              icon: Icons.replay_10,
+                              size: 42,
                               onPressed: () => _seekRelative(-10),
                             ),
                             const SizedBox(width: 28),
@@ -1400,7 +1507,8 @@ class _FullscreenVideoPlayerScreenState
                             ),
                             const SizedBox(width: 28),
                             _FullscreenControlButton(
-                              icon: Icons.forward_10, size: 42,
+                              icon: Icons.forward_10,
+                              size: 42,
                               onPressed: () => _seekRelative(10),
                             ),
                           ],
@@ -1412,7 +1520,9 @@ class _FullscreenVideoPlayerScreenState
 
               // Bottom bar
               Positioned(
-                left: 0, right: 0, bottom: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
                 child: AnimatedOpacity(
                   opacity: _showControls ? 1 : 0,
                   duration: const Duration(milliseconds: 200),
@@ -1420,7 +1530,10 @@ class _FullscreenVideoPlayerScreenState
                     top: false,
                     child: widget.isLivestream
                         ? Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
                             child: Row(
                               children: [
                                 _buildLiveBadge(),
@@ -1428,9 +1541,10 @@ class _FullscreenVideoPlayerScreenState
                                 Text(
                                   _formatDuration(elapsed),
                                   style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14),
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
                                 ),
                                 const Spacer(),
                                 _buildVolumeRow(),
@@ -1438,7 +1552,10 @@ class _FullscreenVideoPlayerScreenState
                             ),
                           )
                         : Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -1449,7 +1566,10 @@ class _FullscreenVideoPlayerScreenState
                                     Expanded(
                                       child: Text(
                                         '${_formatDuration(position)} / ${_formatDuration(value.duration)}',
-                                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 13,
+                                        ),
                                       ),
                                     ),
                                     _CompactMenu<double>(
@@ -1460,7 +1580,11 @@ class _FullscreenVideoPlayerScreenState
                                       filled: true,
                                     ),
                                     const SizedBox(width: 8),
-                                    _VolumeMenu(volume: _volume, onChanged: _setVolume, filled: true),
+                                    _VolumeMenu(
+                                      volume: _volume,
+                                      onChanged: _setVolume,
+                                      filled: true,
+                                    ),
                                   ],
                                 ),
                               ],
@@ -1514,7 +1638,8 @@ class _InlineControlButton extends StatelessWidget {
         customBorder: const CircleBorder(),
         onTap: onPressed,
         child: SizedBox(
-          width: 42, height: 42,
+          width: 42,
+          height: 42,
           child: Icon(icon, color: Colors.white, size: 24),
         ),
       ),
@@ -1566,10 +1691,12 @@ class _CompactMenu<T> extends StatelessWidget {
     return PopupMenuButton<T>(
       onSelected: (value) async => await onSelected(value),
       itemBuilder: (context) => items
-          .map((item) => PopupMenuItem<T>(
-                value: item,
-                child: Text(itemLabelBuilder(item)),
-              ))
+          .map(
+            (item) => PopupMenuItem<T>(
+              value: item,
+              child: Text(itemLabelBuilder(item)),
+            ),
+          )
           .toList(),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -1582,13 +1709,20 @@ class _CompactMenu<T> extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 16, color: filled ? Colors.black : Colors.black87),
+              Icon(
+                icon,
+                size: 16,
+                color: filled ? Colors.black : Colors.black87,
+              ),
               const SizedBox(width: 6),
             ],
-            Text(label,
-                style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: filled ? Colors.black : Colors.black87)),
+            Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: filled ? Colors.black : Colors.black87,
+              ),
+            ),
           ],
         ),
       ),
@@ -1601,7 +1735,11 @@ class _VolumeMenu extends StatelessWidget {
   final Future<void> Function(double) onChanged;
   final bool filled;
 
-  const _VolumeMenu({required this.volume, required this.onChanged, this.filled = false});
+  const _VolumeMenu({
+    required this.volume,
+    required this.onChanged,
+    this.filled = false,
+  });
 
   static const List<double> _options = [0.0, 0.25, 0.5, 0.75, 1.0];
 
@@ -1610,10 +1748,12 @@ class _VolumeMenu extends StatelessWidget {
     return PopupMenuButton<double>(
       onSelected: (v) async => await onChanged(v),
       itemBuilder: (context) => _options
-          .map((v) => PopupMenuItem<double>(
-                value: v,
-                child: Text('${(v * 100).round()}%'),
-              ))
+          .map(
+            (v) => PopupMenuItem<double>(
+              value: v,
+              child: Text('${(v * 100).round()}%'),
+            ),
+          )
           .toList(),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -1634,8 +1774,9 @@ class _VolumeMenu extends StatelessWidget {
             Text(
               '${(volume * 100).round()}%',
               style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: filled ? Colors.black : Colors.black87),
+                fontWeight: FontWeight.w600,
+                color: filled ? Colors.black : Colors.black87,
+              ),
             ),
           ],
         ),
