@@ -28,6 +28,7 @@ class _MediaModuleState extends State<MediaModule>
     with SingleTickerProviderStateMixin {
   late Future<EventMediaResponse> _eventMediaFuture;
   final Set<int> _downloadingIds = <int>{};
+  Set<String> _downloadedUrls = {};
   late TabController _tabController;
 
   @override
@@ -39,6 +40,18 @@ class _MediaModuleState extends State<MediaModule>
     );
 
     _tabController = TabController(length: 2, vsync: this);
+    _loadDownloadedUrls();
+  }
+
+  Future<void> _loadDownloadedUrls() async {
+    final urls = await DownloadService.getDownloadedUrls(
+      eventId: widget.eventId,
+    );
+    if (mounted) {
+      setState(() {
+        _downloadedUrls = urls;
+      });
+    }
   }
 
   Future<void> _reload() async {
@@ -72,6 +85,8 @@ class _MediaModuleState extends State<MediaModule>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${media.title} downloaded successfully')),
       );
+      // Refresh the set of already-downloaded URLs so the icon updates.
+      await _loadDownloadedUrls();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -94,6 +109,7 @@ class _MediaModuleState extends State<MediaModule>
           initialIndex: initialIndex,
           onDownload: _downloadMedia,
           downloadingIds: _downloadingIds,
+          downloadedUrls: _downloadedUrls,
         ),
       ),
     );
@@ -353,6 +369,7 @@ class _MediaModuleState extends State<MediaModule>
           itemBuilder: (context, index) {
             final media = images[index];
             final isDownloading = _downloadingIds.contains(media.id);
+            final isDownloaded = _downloadedUrls.contains(media.url);
             final previewUrl = _resolveMediaUrl(
               media.thumbnailUrl ?? media.url,
             );
@@ -414,11 +431,13 @@ class _MediaModuleState extends State<MediaModule>
                             top: 10,
                             right: 10,
                             child: Material(
-                              color: Colors.black54,
+                              color: isDownloaded
+                                  ? const Color(0xFF534AB7).withOpacity(0.85)
+                                  : Colors.black54,
                               borderRadius: BorderRadius.circular(20),
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(20),
-                                onTap: isDownloading
+                                onTap: (isDownloading || isDownloaded)
                                     ? null
                                     : () => _downloadMedia(media),
                                 child: Padding(
@@ -432,8 +451,10 @@ class _MediaModuleState extends State<MediaModule>
                                             color: Colors.white,
                                           ),
                                         )
-                                      : const Icon(
-                                          Icons.download,
+                                      : Icon(
+                                          isDownloaded
+                                              ? Icons.check_circle
+                                              : Icons.download,
                                           size: 18,
                                           color: Colors.white,
                                         ),
@@ -504,6 +525,7 @@ class _MediaModuleState extends State<MediaModule>
               media: _copyVideoWithResolvedUrl(video),
               onDownload: () => _downloadMedia(video),
               isDownloading: _downloadingIds.contains(video.id),
+              isDownloaded: _downloadedUrls.contains(video.url),
             ),
           ),
         ),
@@ -566,10 +588,18 @@ class _MediaModuleState extends State<MediaModule>
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
-            child: FilledButton.icon(
+            child: OutlinedButton.icon(
               onPressed: () => _openLivestream(event),
               icon: const Icon(Icons.play_arrow),
               label: const Text('Play Livestream'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                side: const BorderSide(color: Color(0xFF5B4FCF), width: 2),
+                foregroundColor: const Color(0xFF5B4FCF),
+              ),
             ),
           ),
         ],
@@ -741,12 +771,14 @@ class _ImageGalleryViewerScreen extends StatefulWidget {
   final int initialIndex;
   final Future<void> Function(MediaItem media) onDownload;
   final Set<int> downloadingIds;
+  final Set<String> downloadedUrls;
 
   const _ImageGalleryViewerScreen({
     required this.images,
     required this.initialIndex,
     required this.onDownload,
     required this.downloadingIds,
+    required this.downloadedUrls,
   });
 
   @override
@@ -797,6 +829,7 @@ class _ImageGalleryViewerScreenState extends State<_ImageGalleryViewerScreen> {
   Widget build(BuildContext context) {
     final currentMedia = widget.images[_currentIndex];
     final isDownloading = widget.downloadingIds.contains(currentMedia.id);
+    final isDownloaded = widget.downloadedUrls.contains(currentMedia.url);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -815,8 +848,11 @@ class _ImageGalleryViewerScreenState extends State<_ImageGalleryViewerScreen> {
                       color: Colors.white,
                     ),
                   )
-                : const Icon(Icons.download, color: Colors.white),
-            onPressed: isDownloading
+                : Icon(
+                    isDownloaded ? Icons.check_circle : Icons.download,
+                    color: isDownloaded ? Colors.greenAccent : Colors.white,
+                  ),
+            onPressed: (isDownloading || isDownloaded)
                 ? null
                 : () async {
                     await widget.onDownload(currentMedia);

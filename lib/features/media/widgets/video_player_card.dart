@@ -10,6 +10,7 @@ class VideoPlayerCard extends StatefulWidget {
   final MediaItem media;
   final VoidCallback? onDownload;
   final bool isDownloading;
+  final bool isDownloaded;
   final bool isLivestream;
   final ValueChanged<bool>? onFullscreenChanged;
   final VoidCallback? onPlaybackStarted;
@@ -19,6 +20,7 @@ class VideoPlayerCard extends StatefulWidget {
     required this.media,
     this.onDownload,
     this.isDownloading = false,
+    this.isDownloaded = false,
     this.isLivestream = false,
     this.onFullscreenChanged,
     this.onPlaybackStarted,
@@ -357,6 +359,7 @@ class _VideoPlayerCardState extends State<VideoPlayerCard> {
               initialVolume: _volume,
               onDownload: widget.onDownload,
               isDownloading: widget.isDownloading,
+              isDownloaded: widget.isDownloaded,
               isLivestream: widget.isLivestream,
             ),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -624,7 +627,7 @@ class _VideoPlayerCardState extends State<VideoPlayerCard> {
                 child: _isInitializing
                     ? const CircularProgressIndicator(color: Color(0xFF534AB7))
                     : Material(
-                        color: Colors.white.withValues(alpha: 0.95),
+                        color: Colors.white.withOpacity(0.95),
                         shape: const CircleBorder(),
                         child: InkWell(
                           customBorder: const CircleBorder(),
@@ -650,7 +653,10 @@ class _VideoPlayerCardState extends State<VideoPlayerCard> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _OverlayCircleButton(
-                      onPressed: widget.isDownloading
+                      color: widget.isDownloaded
+                          ? const Color(0xFF534AB7).withOpacity(0.85)
+                          : Colors.black54,
+                      onPressed: (widget.isDownloading || widget.isDownloaded)
                           ? null
                           : widget.onDownload,
                       child: widget.isDownloading
@@ -662,8 +668,10 @@ class _VideoPlayerCardState extends State<VideoPlayerCard> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Icon(
-                              Icons.download,
+                          : Icon(
+                              widget.isDownloaded
+                                  ? Icons.check_circle
+                                  : Icons.download,
                               color: Colors.white,
                               size: 18,
                             ),
@@ -846,7 +854,11 @@ class _VideoPlayerCardState extends State<VideoPlayerCard> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             _OverlayCircleButton(
-                              onPressed: widget.isDownloading
+                              color: widget.isDownloaded
+                                  ? const Color(0xFF534AB7).withOpacity(0.85)
+                                  : Colors.black54,
+                              onPressed:
+                                  (widget.isDownloading || widget.isDownloaded)
                                   ? null
                                   : widget.onDownload,
                               child: widget.isDownloading
@@ -858,8 +870,10 @@ class _VideoPlayerCardState extends State<VideoPlayerCard> {
                                         color: Colors.white,
                                       ),
                                     )
-                                  : const Icon(
-                                      Icons.download,
+                                  : Icon(
+                                      widget.isDownloaded
+                                          ? Icons.check_circle
+                                          : Icons.download,
                                       color: Colors.white,
                                       size: 18,
                                     ),
@@ -984,7 +998,7 @@ class _PulsingDotState extends State<_PulsingDot>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _anim,
-      builder: (_, _) => Opacity(
+      builder: (_, __) => Opacity(
         opacity: _anim.value,
         child: Container(
           width: 7,
@@ -1008,6 +1022,7 @@ class FullscreenVideoPlayerScreen extends StatefulWidget {
   final double initialVolume;
   final VoidCallback? onDownload;
   final bool isDownloading;
+  final bool isDownloaded;
   final bool isLivestream;
 
   const FullscreenVideoPlayerScreen({
@@ -1018,6 +1033,7 @@ class FullscreenVideoPlayerScreen extends StatefulWidget {
     required this.initialVolume,
     this.onDownload,
     this.isDownloading = false,
+    this.isDownloaded = false,
     this.isLivestream = false,
   });
 
@@ -1035,6 +1051,7 @@ class _FullscreenVideoPlayerScreenState
   Timer? _hideControlsTimer;
   Timer? _liveElapsedTimer;
   Duration _liveElapsed = Duration.zero;
+  bool _didNotifyPlaybackStarted = false;
 
   // Seek ripple
   int? _seekRipple;
@@ -1455,7 +1472,8 @@ class _FullscreenVideoPlayerScreenState
                           ),
                           if (!widget.isLivestream)
                             IconButton(
-                              onPressed: widget.isDownloading
+                              onPressed:
+                                  (widget.isDownloading || widget.isDownloaded)
                                   ? null
                                   : widget.onDownload,
                               icon: widget.isDownloading
@@ -1467,9 +1485,13 @@ class _FullscreenVideoPlayerScreenState
                                         color: Colors.white,
                                       ),
                                     )
-                                  : const Icon(
-                                      Icons.download,
-                                      color: Colors.white,
+                                  : Icon(
+                                      widget.isDownloaded
+                                          ? Icons.check_circle
+                                          : Icons.download,
+                                      color: widget.isDownloaded
+                                          ? Colors.greenAccent
+                                          : Colors.white,
                                     ),
                             ),
                         ],
@@ -1606,13 +1628,18 @@ class _FullscreenVideoPlayerScreenState
 class _OverlayCircleButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final Widget child;
+  final Color? color;
 
-  const _OverlayCircleButton({required this.onPressed, required this.child});
+  const _OverlayCircleButton({
+    required this.onPressed,
+    required this.child,
+    this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.black54,
+      color: color ?? Colors.black54,
       shape: const CircleBorder(),
       child: InkWell(
         customBorder: const CircleBorder(),

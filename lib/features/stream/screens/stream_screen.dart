@@ -87,6 +87,7 @@ class _StreamScreenState extends State<StreamScreen> {
   String? _streamStatus;
   Timer? _streamExpiryTimer;
   Timer? _countdownTimer;
+  String? _activeStreamVehicleKey;
   DateTime? _streamExpiryTime;
   int _remainingSeconds = 0;
   bool _hasPlaybackStarted = false;
@@ -279,19 +280,14 @@ class _StreamScreenState extends State<StreamScreen> {
     int score(_VehicleOption option) {
       var total = 0;
       if (vehicleNumber.isNotEmpty &&
-          _normalize(option.vehicleNumber) == vehicleNumber) {
+          _normalize(option.vehicleNumber) == vehicleNumber)
         total += 100;
-      }
-      if (vin.isNotEmpty && _normalize(option.vin) == vin) {
-        total += 90;
-      }
+      if (vin.isNotEmpty && _normalize(option.vin) == vin) total += 90;
       if (licensePlate.isNotEmpty &&
-          _normalize(option.licensePlateNumber) == licensePlate) {
+          _normalize(option.licensePlateNumber) == licensePlate)
         total += 80;
-      }
-      if (cameraId.isNotEmpty && _normalize(option.cameraId) == cameraId) {
+      if (cameraId.isNotEmpty && _normalize(option.cameraId) == cameraId)
         total += 70;
-      }
       return total;
     }
 
@@ -385,6 +381,7 @@ class _StreamScreenState extends State<StreamScreen> {
       _countdownTimer?.cancel();
       setState(() {
         _activeStream = null;
+        _activeStreamVehicleKey = null;
         _streamStatus = null;
         _streamExpiryTime = null;
         _streamExpired = true;
@@ -467,6 +464,7 @@ class _StreamScreenState extends State<StreamScreen> {
           mimeType: 'application/x-mpegURL',
           source: 'livestream',
         );
+        _activeStreamVehicleKey = selected.key;
         _streamStatus = 'Live stream ready';
         _streamExpiryTime = null;
         _streamExpired = false;
@@ -478,6 +476,7 @@ class _StreamScreenState extends State<StreamScreen> {
       _countdownTimer?.cancel();
       setState(() {
         _activeStream = null;
+        _activeStreamVehicleKey = null;
         _streamStatus = msg;
         _streamExpiryTime = null;
         _streamExpired = false;
@@ -553,7 +552,7 @@ class _StreamScreenState extends State<StreamScreen> {
         ),
         const SizedBox(height: 10),
         DropdownButtonFormField<String>(
-          initialValue:
+          value:
               _filteredOptions.any((item) => item.key == _selectedVehicle?.key)
               ? _selectedVehicle?.key
               : null,
@@ -703,8 +702,8 @@ class _StreamScreenState extends State<StreamScreen> {
                       color: _streamExpired
                           ? Theme.of(
                               context,
-                            ).colorScheme.primary.withValues(alpha: 0.12)
-                          : Colors.white.withValues(alpha: 0.72),
+                            ).colorScheme.primary.withOpacity(0.12)
+                          : Colors.white.withOpacity(0.72),
                     ),
                     child: Icon(
                       _streamExpired
@@ -748,24 +747,28 @@ class _StreamScreenState extends State<StreamScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (_activeStream == null)
-                  FilledButton.icon(
-                    style: FilledButton.styleFrom(
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      side: BorderSide(
+                        color: Theme.of(context).colorScheme.primary,
+                        width: 2,
+                      ),
+                      foregroundColor: Theme.of(context).colorScheme.primary,
                     ),
                     onPressed: _isStartingStream || selected.cameraId.isEmpty
                         ? null
                         : _startLivestream,
                     icon: _isStartingStream
-                        ? const SizedBox(
+                        ? SizedBox(
                             height: 18,
                             width: 18,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                           )
                         : Icon(_streamExpired ? Icons.replay : Icons.live_tv),
@@ -905,6 +908,15 @@ class _StreamScreenState extends State<StreamScreen> {
         latestLocation: (v['latestLocation'] ?? '').toString(),
       );
     }).toList();
+  }
+
+  static String _formatLocation(Map<dynamic, dynamic> location) {
+    final parts = <String>[
+      _text(location['address']),
+      _text(location['city']),
+      _text(location['state']),
+    ].where((v) => v.isNotEmpty).toList();
+    return parts.join(', ');
   }
 }
 
@@ -1119,7 +1131,7 @@ class _SeverityChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
-        color: color.withValues(alpha: 0.12),
+        color: color.withOpacity(0.12),
       ),
       child: Text(
         label.isEmpty ? 'UNKNOWN' : label,
