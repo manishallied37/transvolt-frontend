@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+import '../../auth/services/auth_service.dart';
 import '../../auth/services/token_storage.dart';
 
 class VehicleService {

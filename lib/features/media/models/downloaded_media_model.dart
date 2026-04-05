@@ -1,10 +1,12 @@
+import 'dart:io';
+
 class DownloadedMediaItem {
   final String id;
   final int eventId;
   final String title;
-  final String type; // image or video
+  final String type; // 'image' or 'video'
   final String remoteUrl;
-  final String localPath;
+  final String localPath; // external storage path or content:// URI
   final DateTime downloadedAt;
 
   DownloadedMediaItem({
@@ -17,27 +19,36 @@ class DownloadedMediaItem {
     required this.downloadedAt,
   });
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'eventId': eventId,
-      'title': title,
-      'type': type,
-      'remoteUrl': remoteUrl,
-      'localPath': localPath,
-      'downloadedAt': downloadedAt.toIso8601String(),
-    };
+  /// Returns true when the file is confirmed to exist on device storage.
+  /// content:// MediaStore URIs cannot be stat-checked synchronously, so they
+  /// are assumed present (DownloadService verifies them asynchronously).
+  bool get existsOnDevice {
+    if (localPath.startsWith('content://')) return true;
+    try {
+      return File(localPath).existsSync();
+    } catch (_) {
+      return false;
+    }
   }
 
-  factory DownloadedMediaItem.fromJson(Map<String, dynamic> json) {
-    return DownloadedMediaItem(
-      id: json['id'],
-      eventId: json['eventId'],
-      title: json['title'],
-      type: json['type'],
-      remoteUrl: json['remoteUrl'],
-      localPath: json['localPath'],
-      downloadedAt: DateTime.parse(json['downloadedAt']),
-    );
-  }
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'eventId': eventId,
+    'title': title,
+    'type': type,
+    'remoteUrl': remoteUrl,
+    'localPath': localPath,
+    'downloadedAt': downloadedAt.toIso8601String(),
+  };
+
+  factory DownloadedMediaItem.fromJson(Map<String, dynamic> json) =>
+      DownloadedMediaItem(
+        id: json['id'] as String,
+        eventId: json['eventId'] as int,
+        title: json['title'] as String,
+        type: json['type'] as String,
+        remoteUrl: json['remoteUrl'] as String,
+        localPath: json['localPath'] as String,
+        downloadedAt: DateTime.parse(json['downloadedAt'] as String),
+      );
 }
